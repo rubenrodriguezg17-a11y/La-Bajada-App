@@ -1,0 +1,8 @@
+package com.labajada.app.domain.model
+
+data class Dish(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val price: String,
+    val imagePath: String
+)
