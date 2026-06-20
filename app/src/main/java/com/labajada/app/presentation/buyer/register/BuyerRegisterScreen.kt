@@ -20,18 +20,10 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuyerRegisterScreen(
+    viewModel: BuyerRegisterViewModel, // ◄ Recibe el ViewModel inyectado desde el NavGraph
     onRegistrationComplete: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var departamento by remember { mutableStateOf("") }
-    var provincia by remember { mutableStateOf("") }
-
-    // autenticación y login
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    // Estado del scroll para que el teclado no tape los inputs de abajo
+    val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
     Column(
@@ -42,7 +34,6 @@ fun BuyerRegisterScreen(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Encabezado
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -57,7 +48,7 @@ fun BuyerRegisterScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Queremos conocerte para mostrarte un botique al toque.",
+                text = "Queremos conocerte para mostrarte un huarique al toque.",
                 fontSize = 15.sp,
                 color = Color(0xFF757575)
             )
@@ -70,8 +61,8 @@ fun BuyerRegisterScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
+                value = uiState.name,
+                onValueChange = { viewModel.onNameChange(it) },
                 label = { Text("Tu Nombre o Apodo") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -80,8 +71,8 @@ fun BuyerRegisterScreen(
             )
 
             OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
+                value = uiState.phone,
+                onValueChange = { viewModel.onPhoneChange(it) },
                 label = { Text("Número de Celular") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -89,9 +80,10 @@ fun BuyerRegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
+
             OutlinedTextField(
-                value = departamento,
-                onValueChange = { departamento = it },
+                value = uiState.departamento,
+                onValueChange = { viewModel.onDepartamentoChange(it) },
                 label = { Text("Departamento (Ej: La Libertad)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -100,8 +92,8 @@ fun BuyerRegisterScreen(
             )
 
             OutlinedTextField(
-                value = provincia,
-                onValueChange = { provincia = it },
+                value = uiState.provincia,
+                onValueChange = { viewModel.onProvinciaChange(it) },
                 label = { Text("Provincia (Ej: Trujillo)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -109,10 +101,9 @@ fun BuyerRegisterScreen(
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
 
-            // Campo de Correo Electrónico (Gmail)
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
+                value = uiState.email,
+                onValueChange = { viewModel.onEmailChange(it) },
                 label = { Text("Correo Electrónico (Gmail)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -121,10 +112,9 @@ fun BuyerRegisterScreen(
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
 
-            //  Campo de Contraseña
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = uiState.password,
+                onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -133,17 +123,25 @@ fun BuyerRegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
+
+            // Muestra dinámicamente un mensaje en pantalla si hay error de persistencia
+            if (uiState.error != null) {
+                Text(
+                    text = uiState.error!!,
+                    color = Color.Red,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botón de Acción Final Blindado
         Button(
-            onClick = onRegistrationComplete,
-            // El botón se activa únicamente si las 6 variables obligatorias están llenas
-            enabled = name.isNotBlank() && phone.isNotBlank() &&
-                    departamento.isNotBlank() && provincia.isNotBlank() &&
-                    email.isNotBlank() && password.isNotBlank(),
+            onClick = { viewModel.registerBuyer(onRegistrationComplete) },
+            enabled = uiState.name.isNotBlank() && uiState.phone.isNotBlank() &&
+                    uiState.departamento.isNotBlank() && uiState.provincia.isNotBlank() &&
+                    uiState.email.isNotBlank() && uiState.password.isNotBlank() && !uiState.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(58.dp)
@@ -154,12 +152,20 @@ fun BuyerRegisterScreen(
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                text = "Finalizar y Buscar Comida",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.5.dp
+                )
+            } else {
+                Text(
+                    text = "Finalizar y Buscar Comida",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
     }
 }

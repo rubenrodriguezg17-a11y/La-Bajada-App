@@ -1,226 +1,200 @@
 package com.labajada.app.presentation.restaurant.register
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RestaurantRegisterScreen(
+    viewModel: RestaurantRegisterViewModel,
     onRegistrationComplete: () -> Unit
 ) {
-    // --- ESTADOS COMPLETOS DEL HUARIQUE (Sincronizados con el Dashboard) ---
-    var restaurantName by remember { mutableStateOf("") }
-    var rucNumber by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var addressDetails by remember { mutableStateOf("") }
-
-    // Credenciales para el futuro Login del Restaurante
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    // Estado del selector de categoría (Menú Desplegable)
-    var expandedCategory by remember { mutableStateOf(false) }
-    val categoriasVisibles = listOf("🐟 Cevichería", "🍲 Criollo", "🍔 Fast Food / Bajadas", "🔥 Pollería", "🇨🇳 Chifa")
-    var selectedCategory by remember { mutableStateOf("") }
-
-    // Estados de Geolocalización para Room (Fijos en Trujillo por defecto)
-    var latitude by remember { mutableDoubleStateOf(-8.1116) }
-    var longitude by remember { mutableDoubleStateOf(-79.0287) }
-    var isLocationSelected by remember { mutableStateOf(false) }
-    var showMapDialog by remember { mutableStateOf(false) }
-
-    // Scroll obligatorio para evitar bloqueos con el teclado
+    val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    // Lista de categorías estática alineada con el negocio
+    val rubrosGastronomicos = listOf("Menú clásico", "Cevichería", "Criollo", "Fast Food / Bajadas", "Pollería", "Chifa")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFAFAFA))
-            .padding(24.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.SpaceBetween
+            .verticalScroll(scrollState)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Encabezado con estilo Gris Industrial / Oscuro para el rol negocio
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(text = "Registra tu Huarique", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color(0xFF263238))
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = "Configura tu cocina para empezar a recibir comensales.", fontSize = 14.sp, color = Color(0xFF757575))
-        }
+        Text(
+            text = "Registra tu Huarique",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF263238),
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        Text(
+            text = "Únete a La Bajada y gestiona tus pedidos al toque",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Bloque del Formulario Técnico
-        Column(
+        OutlinedTextField(
+            value = state.restaurantName,
+            onValueChange = { viewModel.onNameChange(it) },
+            label = { Text("Nombre del Restaurante") },
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = state.rucNumber,
+            onValueChange = { if (it.length <= 11) viewModel.onRucChange(it) },
+            label = { Text("Número de RUC") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = state.phoneNumber,
+            onValueChange = { viewModel.onPhoneChange(it) },
+            label = { Text("Teléfono Celular") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        // --- Selector Desplegable de Rubro Comercial ---
+        ExposedDropdownMenuBox(
+            expanded = state.expandedCategory,
+            onExpandedChange = { viewModel.toggleCategoryDropdown() }
         ) {
             OutlinedTextField(
-                value = restaurantName, onValueChange = { restaurantName = it },
-                label = { Text("Nombre del Restaurante") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
+                value = state.selectedCategory,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Rubro Gastronómico") },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                shape = RoundedCornerShape(12.dp)
             )
-
-            OutlinedTextField(
-                value = rucNumber, onValueChange = { if (it.length <= 11) rucNumber = it },
-                label = { Text("RUC o DNI del Titular") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
-            )
-
-            OutlinedTextField(
-                value = phoneNumber, onValueChange = { phoneNumber = it },
-                label = { Text("Teléfono / WhatsApp de Contacto") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
-            )
-
-            // Selector Desplegable de Rubro
-            ExposedDropdownMenuBox(
-                expanded = expandedCategory,
-                onExpandedChange = { expandedCategory = !expandedCategory }
+            ExposedDropdownMenu(
+                expanded = state.expandedCategory,
+                onDismissRequest = { viewModel.toggleCategoryDropdown() }
             ) {
-                OutlinedTextField(
-                    value = selectedCategory, onValueChange = {}, readOnly = true,
-                    label = { Text("Tipo de comida / Rubro") },
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(), shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
-                )
-                ExposedDropdownMenu(expanded = expandedCategory, onDismissRequest = { expandedCategory = false }) {
-                    categoriasVisibles.forEach { item ->
-                        DropdownMenuItem(text = { Text(item) }, onClick = { selectedCategory = item; expandedCategory = false })
-                    }
+                rubrosGastronomicos.forEach { rubro: String ->
+                    DropdownMenuItem(
+                        text = { Text(rubro) },
+                        onClick = { viewModel.onCategorySelected(rubro) }
+                    )
                 }
             }
-            // Selector Satelital Inmune a congelamientos de foco 📍
-            Box(modifier = Modifier.fillMaxWidth().clickable { showMapDialog = true }) {
-                OutlinedTextField(
-                    value = if (isLocationSelected) "Ubicación fijada en el mapa" else "Toca para ubicar en el mapa",
-                    onValueChange = {}, readOnly = true, enabled = false,
-                    label = { Text("Ubicación Satelital") },
-                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = if (isLocationSelected) Color(0xFFD32F2F) else Color.Gray) },
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = if (isLocationSelected) Color(0xFF263238) else Color(0xFFCCCCCC),
-                        disabledLabelColor = Color(0xFF263238), disabledTextColor = if (isLocationSelected) Color(0xFF212121) else Color.Gray
-                    )
+        }
+
+        // --- Cuadro de Ubicación Satelital ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { viewModel.toggleMapDialog(true) }
+        ) {
+            OutlinedTextField(
+                value = if (state.isLocationSelected) "Ubicación Confirmada ✓" else "Seleccionar Ubicación en Mapa",
+                onValueChange = {},
+                readOnly = true,
+                enabled = false,
+                label = { Text("Georreferenciación") },
+                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFD32F2F)) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = if (state.isLocationSelected) Color(0xFF4CAF50) else Color(0xFF263238),
+                    disabledLabelColor = Color(0xFF263238),
+                    disabledTextColor = if (state.isLocationSelected) Color(0xFF4CAF50) else Color(0xFF212121)
                 )
-            }
-
-            OutlinedTextField(
-                value = addressDetails, onValueChange = { addressDetails = it },
-                label = { Text("Dirección escrita (Ej: Av. Larco 123 u Oficina)") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
-            )
-
-            // 📧 Credenciales de acceso para el dueño del Local
-            OutlinedTextField(
-                value = email, onValueChange = { email = it },
-                label = { Text("Correo de la Empresa (Gmail)") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
-            )
-
-            OutlinedTextField(
-                value = password, onValueChange = { password = it },
-                label = { Text("Contraseña de Acceso") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF263238), focusedLabelColor = Color(0xFF263238))
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        OutlinedTextField(
+            value = state.addressDetails,
+            onValueChange = { viewModel.onAddressChange(it) },
+            label = { Text("Dirección de Local (Ej: Av. Larco 123)") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
 
-        // Botón de Acción Final de color Gris Industrial Oscuro
+        OutlinedTextField(
+            value = state.email,
+            onValueChange = { viewModel.onEmailChange(it) },
+            label = { Text("Correo Electrónico") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = state.password,
+            onValueChange = { viewModel.onPasswordChange(it) },
+            label = { Text("Contraseña de Acceso") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation()
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // --- Botón de Registro Final ---
         Button(
-            onClick = onRegistrationComplete,
-            // Bloquea el envío hasta que las 7 casillas de negocio y mapa estén completas 🔒
-            enabled = restaurantName.isNotBlank() && rucNumber.isNotBlank() &&
-                    phoneNumber.isNotBlank() && selectedCategory.isNotBlank() &&
-                    addressDetails.isNotBlank() && email.isNotBlank() &&
-                    password.isNotBlank() && isLocationSelected,
-            modifier = Modifier.fillMaxWidth().height(58.dp).padding(bottom = 8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263238), disabledContainerColor = Color(0xFFE0E0E0)),
-            shape = RoundedCornerShape(12.dp)
+            onClick = { viewModel.registerRestaurant(onRegistrationComplete) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263238)),
+            shape = RoundedCornerShape(12.dp),
+            enabled = !state.isLoading
         ) {
-            Text(text = "Finalizar y Abrir Cocina", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            if (state.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Registrar Comercio", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+
+        if (state.error != null) {
+            Text(
+                text = state.error ?: "",
+                color = Color(0xFFD32F2F),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 
-    // Modal de Google Maps extractor de coordenadas decimales
-    if (showMapDialog) {
-        Dialog(onDismissRequest = { showMapDialog = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Card(
-                modifier = Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.75f),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                        Text(text = "Arrastra el marcador hasta tu local", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF263238))
-                    }
-
-                    val puntoInicial = remember { LatLng(latitude, longitude) }
-                    val markerState = rememberMarkerState(position = puntoInicial)
-                    val cameraPositionState = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(puntoInicial, 15f) }
-
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        GoogleMap(modifier = Modifier.fillMaxSize(), cameraPositionState = cameraPositionState, onMapClick = { latLng -> markerState.position = latLng }) {
-                            Marker(state = markerState, title = "Mi Huarique", draggable = true)
-                        }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        TextButton(onClick = { showMapDialog = false }, modifier = Modifier.weight(1f)) { Text("Cancelar", color = Color.Gray) }
-                        Button(
-                            onClick = {
-                                // Extrae las coordenadas exactas para tus columnas Double de Room 💾
-                                latitude = markerState.position.latitude
-                                longitude = markerState.position.longitude
-                                isLocationSelected = true
-                                showMapDialog = false
-                            },
-                            modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263238)), shape = RoundedCornerShape(8.dp)
-                        ) { Text("Confirmar", fontWeight = FontWeight.Bold) }
-                    }
-                }
+    if (state.showMapDialog) {
+        com.labajada.app.presentation.restaurant.dashboard.components.modals.RestaurantMapDialog(
+            initialLatitude = if (state.latitude != 0.0) state.latitude else -8.1116,
+            initialLongitude = if (state.longitude != 0.0) state.longitude else -79.0287,
+            onConfirm = { lat, lng ->
+                viewModel.onLocationConfirmed(lat, lng)
+            },
+            onDismiss = {
+                viewModel.toggleMapDialog(false)
             }
-        }
+        )
     }
 }

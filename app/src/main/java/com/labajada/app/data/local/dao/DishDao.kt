@@ -30,10 +30,11 @@ interface DishDao {
     suspend fun clearAllSearchHistory()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMenuDish(dish: com.labajada.app.data.local.entity.DishEntity)
+    suspend fun insertMenuDish(dish: DishEntity)
 
-    @Query("SELECT * FROM restaurant_menu")
-    fun getRestaurantMenu(): kotlinx.coroutines.flow.Flow<List<DishEntity>>
+    // ◄ CORREGIDO: Filtra los platos usando el ID del restaurante activo
+    @Query("SELECT * FROM restaurant_menu WHERE restaurantId = :restaurantId")
+    fun getRestaurantMenu(restaurantId: String): Flow<List<DishEntity>>
 
     @Query("DELETE FROM restaurant_menu WHERE id = :dishId")
     suspend fun deleteMenuDishById(dishId: String)

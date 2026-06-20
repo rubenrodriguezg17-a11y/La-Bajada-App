@@ -1,8 +1,8 @@
 package com.labajada.app.data.repository
 
 import com.labajada.app.data.local.dao.OrderDao
-import com.labajada.app.data.local.entity.toEntity
 import com.labajada.app.data.local.entity.toDomain
+import com.labajada.app.data.local.entity.toEntity
 import com.labajada.app.domain.model.Order
 import com.labajada.app.domain.model.OrderStatus
 import com.labajada.app.domain.repository.OrderRepository
@@ -30,7 +30,6 @@ class OrderRepositoryImpl(
     }
 
     override suspend fun updateOrderStatus(orderId: String, newStatus: OrderStatus) {
-        val orderActualSimulada = Order(id = orderId, buyerName = "", dishName = "", dishPrice = 0.0, quantity = 0, status = newStatus)
-        orderDao.insertOrder(orderActualSimulada.toEntity())
+        orderDao.updateOrderStatusById(orderId, newStatus.name)
     }
 }

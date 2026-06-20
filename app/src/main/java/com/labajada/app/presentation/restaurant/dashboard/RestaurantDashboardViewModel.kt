@@ -2,32 +2,55 @@ package com.labajada.app.presentation.restaurant.dashboard
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.labajada.app.data.local.AppDatabase
-import com.labajada.app.data.repository.LocalDishRepositoryImpl
-import com.labajada.app.data.repository.OrderRepositoryImpl
 import com.labajada.app.domain.model.Dish
 import com.labajada.app.domain.model.OrderStatus
+import com.labajada.app.domain.repository.AuthRepository
 import com.labajada.app.domain.repository.LocalDishRepository
 import com.labajada.app.domain.repository.OrderRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
-class RestaurantDashboardViewModel(context: Context) : ViewModel() {
+@OptIn(ExperimentalCoroutinesApi::class)
+class RestaurantDashboardViewModel(
+    private val dishRepository: LocalDishRepository,
+    private val orderRepository: OrderRepository,
+    private val authRepository: AuthRepository // ◄ INYECCIÓN AGREGADA
+) : ViewModel() {
 
-    private val database = AppDatabase.getDatabase(context)
-    private val dishRepository: LocalDishRepository = LocalDishRepositoryImpl(database.dishDao())
+    private val _uiState = MutableStateFlow(RestaurantDashboardState())
+    val uiState: StateFlow<RestaurantDashboardState> = _uiState.asStateFlow()
 
-    private val orderRepository: OrderRepository = OrderRepositoryImpl(database.orderDao())
+    // Variable para almacenar el ID del restaurante activo en memoria rápida
+    private var currentRestaurantId: String = ""
 
-    val platillosDelDia = dishRepository.getMenuOfTheDay()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // 1. Obtener la sesión activa de forma reactiva
+    private val activeSessionFlow = flow {
+        val session = authRepository.getActiveSession()
+        currentRestaurantId = session?.userId ?: ""
+        emit(session)
+    }
+
+    // 2. Filtrar platillos reactivamente por el ID del restaurante logueado
+    val platillosDelDia = activeSessionFlow.flatMapLatest { session ->
+        if (session != null) {
+            dishRepository.getMenuOfTheDay(session.userId)
+        } else {
+            flow { emit(emptyList()) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val pedidosActivos = orderRepository.getActiveOrders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -35,24 +58,40 @@ class RestaurantDashboardViewModel(context: Context) : ViewModel() {
     val pedidosDespachados = orderRepository.getDispatchedOrders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val gananciasHoy = derivedStateOf {
-        pedidosDespachados.value.sumOf { it.totalPrice }
+    val gananciasHoy = pedidosDespachados
+        .combine(platillosDelDia) { despachados, _ ->
+            despachados.sumOf { it.totalPrice }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val categoriesDisponibles = listOf("Cevichería", "Criollo", "Fast Food / Bajadas", "Pollería", "Chifa")
+
+    // --- Lógica de UI ---
+    fun onTabSelected(index: Int) = _uiState.update { it.copy(selectedTab = index) }
+    fun toggleDeleteDialog(show: Boolean) = _uiState.update { it.copy(showDeleteDialog = show) }
+    fun toggleFormSheet(show: Boolean) = _uiState.update { it.copy(showFormSheet = show) }
+
+    fun onDishNameChange(value: String) = _uiState.update { it.copy(dishName = value) }
+    fun onDishPriceChange(value: String) = _uiState.update { it.copy(dishPrice = value) }
+    fun onDishImageChange(uri: Uri?) = _uiState.update { it.copy(selectedImageUri = uri) }
+
+    // --- Lógica del Perfil ---
+    fun toggleProfileEdit() = _uiState.update { it.copy(isEditingProfile = !_uiState.value.isEditingProfile) }
+    fun onProfileNameChange(v: String) = _uiState.update { it.copy(resNameByOwner = v) }
+    fun onProfileRucChange(v: String) = _uiState.update { it.copy(resRucByOwner = v) }
+    fun onProfilePhoneChange(v: String) = _uiState.update { it.copy(resPhoneByOwner = v) }
+    fun onProfileAddressChange(v: String) = _uiState.update { it.copy(resAddressByOwner = v) }
+    fun toggleProfileCategoryDropdown() = _uiState.update { it.copy(expandedProfileCategory = !it.expandedProfileCategory) }
+    fun onProfileCategorySelected(v: String) = _uiState.update { it.copy(resCategoryByOwner = v, expandedProfileCategory = false) }
+    fun toggleProfileMap(show: Boolean) = _uiState.update { it.copy(showProfileMapDialog = show) }
+    fun onProfileLocationConfirmed(lat: Double, lng: Double) = _uiState.update {
+        it.copy(resLatitude = lat, resLongitude = lng, showProfileMapDialog = false)
     }
-
-    var dishName = mutableStateOf("")
-    var dishPrice = mutableStateOf("")
-    var selectedImageUri = mutableStateOf<Uri?>(null)
-    var isEditing = mutableStateOf(false)
-    var itemIndexToAction = mutableStateOf<Int?>(null)
-    var itemIdToEdit = mutableStateOf("")
-
-    // --- MÉTODOS DE ACCIÓN ---
 
     fun cambiarEstadoPedido(orderId: String, actualStatus: OrderStatus) {
         viewModelScope.launch {
             val siguienteEstado = when (actualStatus) {
-                OrderStatus.PENDING -> OrderStatus.READY        // Pasa de Pendiente a Listo
-                OrderStatus.READY -> OrderStatus.DISPATCHED     // Pasa de Listo a Despachado y suma caja 💰
+                OrderStatus.PENDING -> OrderStatus.READY
+                OrderStatus.READY -> OrderStatus.DISPATCHED
                 else -> OrderStatus.DISPATCHED
             }
             orderRepository.updateOrderStatus(orderId, siguienteEstado)
@@ -60,35 +99,46 @@ class RestaurantDashboardViewModel(context: Context) : ViewModel() {
     }
 
     fun prepararNuevoPlatillo() {
-        isEditing.value = false
-        dishName.value = ""
-        dishPrice.value = ""
-        selectedImageUri.value = null
+        _uiState.update {
+            it.copy(isEditing = false, dishName = "", dishPrice = "", selectedImageUri = null)
+        }
     }
 
     fun prepararEdicionPlatillo(index: Int, dish: Dish) {
-        itemIndexToAction.value = index
-        itemIdToEdit.value = dish.id
-        isEditing.value = true
-        dishName.value = dish.name
-        dishPrice.value = dish.price.replace("S/. ", "")
-        selectedImageUri.value = if (dish.imagePath.isNotEmpty()) Uri.parse(dish.imagePath) else null
+        _uiState.update {
+            it.copy(
+                itemIndexToAction = index,
+                itemIdToEdit = dish.id,
+                isEditing = true,
+                dishName = dish.name,
+                dishPrice = dish.price.replace("S/. ", ""),
+                selectedImageUri = if (dish.imagePath.isNotEmpty()) Uri.parse(dish.imagePath) else null
+            )
+        }
     }
 
     fun guardarPlatillo(context: Context) {
-        val formattedPrice = if (dishPrice.value.startsWith("S/. ")) dishPrice.value else "S/. ${dishPrice.value}"
+        val state = _uiState.value
+        val formattedPrice = if (state.dishPrice.startsWith("S/. ")) state.dishPrice else "S/. ${state.dishPrice}"
         var finalImagePath = ""
-        selectedImageUri.value?.let { uri ->
+
+        state.selectedImageUri?.let { uri ->
             if (uri.toString().startsWith("content://")) {
                 finalImagePath = guardarImagenEnAlmacenamientoInterno(context, uri) ?: ""
             } else { finalImagePath = uri.toString() }
         }
+
+        // ◄ SE AGREGA EL RESTAURANT_ID REAL AL MODELO AL MOMENTO DE GUARDAR
         val dishModel = Dish(
-            id = if (isEditing.value) itemIdToEdit.value else java.util.UUID.randomUUID().toString(),
-            name = dishName.value, price = formattedPrice, imagePath = finalImagePath
+            id = if (state.isEditing) state.itemIdToEdit else java.util.UUID.randomUUID().toString(),
+            restaurantId = currentRestaurantId,
+            name = state.dishName,
+            price = formattedPrice,
+            imagePath = finalImagePath
         )
+
         viewModelScope.launch {
-            if (isEditing.value) dishRepository.updateDishInMenu(dishModel)
+            if (state.isEditing) dishRepository.updateDishInMenu(dishModel)
             else dishRepository.saveDishToMenu(dishModel)
         }
     }
@@ -107,4 +157,13 @@ class RestaurantDashboardViewModel(context: Context) : ViewModel() {
             file.absolutePath
         } catch (e: Exception) { e.printStackTrace(); null }
     }
+    fun prepararEliminacionPlatillo(index: Int, dishId: String) {
+        _uiState.update {
+            it.copy(
+                itemIndexToAction = index,
+                itemIdToEdit = dishId
+            )
+        }
+    }
+
 }

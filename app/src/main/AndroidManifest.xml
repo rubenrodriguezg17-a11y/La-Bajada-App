@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permisos obligatorios para el uso de Google Maps con GPS real -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
 
         android:allowBackup="true"
@@ -12,6 +17,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LaBajada">
+
 
         <meta-data android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyC602gSdKXUJFbH2qXn57sfNLK6fo3hIbY"/>
