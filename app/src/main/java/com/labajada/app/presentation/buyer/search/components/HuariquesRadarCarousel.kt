@@ -9,13 +9,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.android.gms.maps.model.CameraPosition
@@ -29,57 +30,107 @@ fun HuariquesRadarCarousel(
     huariquesRadar: List<RadarHuarique>,
     cameraPositionState: CameraPositionState,
     searchViewModel: BuyerSearchViewModel,
-    onOpenCart: (RadarHuarique) -> Unit
+    onVerMenu: (RadarHuarique) -> Unit
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
     ) {
         items(huariquesRadar) { huarique ->
             Card(
                 modifier = Modifier
-                    .width(240.dp)
+                    .width(260.dp)
                     .clickable {
-                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(huarique.latitud, huarique.longitud), 16f)
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                            LatLng(huarique.latitud, huarique.longitud), 18.0f // Cambiado a tu zoom cercano 18f
+                        )
                     },
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, Color(0xFFE0E0E0))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(text = huarique.nombre, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121), maxLines = 1)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "${huarique.distancia} • ${huarique.category}", fontSize = 12.sp, color = Color(0xFF757575))
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                Column(modifier = Modifier.padding(14.dp)) {
+                    // Fila Superior: Nombre del Huarique + TEXTO INTERACTIVO "Ver menú"
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "S/. ${String.format("%.2f", huarique.precioPromedio)}", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFFD32F2F))
+                        Text(
+                            text = huarique.nombre,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF212121),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Ver menú",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFD32F2F),
+                            textDecoration = TextDecoration.Underline,
+                            modifier = Modifier
+                                .clickable { onVerMenu(huarique) }
+                                .padding(start = 8.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            var isFavorite by remember { mutableStateOf(false) }
+                    // 2. Distancia y Categoría del local
+                    Text(
+                        text = "${huarique.distancia} • ${huarique.category}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF757575),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 3. Fila Inferior: Guía táctil y Botón de Favoritos
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Toca para centrar en mapa",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.LightGray,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        var isFavorite by remember { mutableStateOf(false) }
+
+                        IconButton(
+                            onClick = {
+                                isFavorite = !isFavorite
+                                if (isFavorite) {
+                                    searchViewModel.agregarRestauranteAFavoritos(
+                                        id = huarique.id,
+                                        nombre = huarique.nombre,
+                                        categoria = huarique.category,
+                                        direccion = huarique.distancia
+                                    )
+                                } else {
+                                    searchViewModel.quitarRestauranteDeFavoritos(huarique.id)
+                                }
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = null,
+                                contentDescription = "Favorito",
                                 tint = if (isFavorite) Color(0xFFD32F2F) else Color.Gray,
-                                modifier = Modifier.size(22.dp).clickable {
-                                    isFavorite = !isFavorite
-                                    if (isFavorite) {
-                                        searchViewModel.agregarPlatoAFavoritos(huarique.nombre, "S/. ${huarique.precioPromedio}")
-                                    } else {
-                                        searchViewModel.quitarPlatoDeFavoritos(huarique.id)
-                                    }
-                                }
-                            )
-
-                            Icon(
-                                imageVector = Icons.Default.ShoppingCart,
-                                contentDescription = "Pedir",
-                                tint = Color(0xFF263238),
-                                modifier = Modifier.size(22.dp).clickable { onOpenCart(huarique) }
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

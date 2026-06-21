@@ -23,7 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.labajada.app.data.local.AppDatabase
 import com.labajada.app.data.local.dao.AuthDao
 import com.labajada.app.data.repository.AuthRepositoryImpl
-import com.labajada.app.data.repository.LocalDishRepositoryImpl
+import com.labajada.app.data.repository.LocalRestaurantRepositoryImpl
 import com.labajada.app.data.repository.OrderRepositoryImpl
 import com.labajada.app.domain.repository.AuthRepository
 import com.labajada.app.domain.usecase.auth.LoginUseCase
@@ -78,7 +78,7 @@ fun LaBajadaNavGraph(
                         RestaurantRegisterViewModel(registerRestaurantUseCase) as T
                     }
                     RestaurantDashboardViewModel::class.java.name -> {
-                        val dishRepo = LocalDishRepositoryImpl(db.dishDao())
+                        val dishRepo = LocalRestaurantRepositoryImpl(db.dishDao())
                         val orderRepo = OrderRepositoryImpl(db.orderDao())
                         RestaurantDashboardViewModel(
                             dishRepository = dishRepo,
@@ -87,13 +87,21 @@ fun LaBajadaNavGraph(
                         ) as T
                     }
                     BuyerSearchViewModel::class.java.name -> {
-                        val dishRepo = LocalDishRepositoryImpl(db.dishDao())
+                        val db = AppDatabase.getDatabase(context)
+                        val dishRepo = LocalRestaurantRepositoryImpl(db.dishDao())
+                        val saveSearchQueryUseCase = com.labajada.app.domain.usecase.search.SaveSearchQueryUseCase(dishRepo)
+                        val getRecentSearchHistoryUseCase = com.labajada.app.domain.usecase.search.GetRecentSearchHistoryUseCase(dishRepo)
+                        val manageFavoriteRestaurantUseCase = com.labajada.app.domain.usecase.search.ManageFavoriteRestaurantUseCase(dishRepo)
+
                         BuyerSearchViewModel(
-                            saveSearchQueryUseCase = com.labajada.app.domain.usecase.search.SaveSearchQueryUseCase(dishRepo),
-                            getRecentSearchHistoryUseCase = com.labajada.app.domain.usecase.search.GetRecentSearchHistoryUseCase(dishRepo),
-                            manageFavoriteDishUseCase = com.labajada.app.domain.usecase.search.ManageFavoriteDishUseCase(dishRepo)
+                            saveSearchQueryUseCase = saveSearchQueryUseCase,
+                            getRecentSearchHistoryUseCase = getRecentSearchHistoryUseCase,
+                            manageFavoriteRestaurantUseCase = manageFavoriteRestaurantUseCase, // ◄ CORREGIDO
+                            dishDao = db.dishDao(),
+                            authRepository = authRepository
                         ) as T
                     }
+
                     OrderViewModel::class.java.name -> {
                         val orderRepo = OrderRepositoryImpl(db.orderDao())
                         OrderViewModel(orderRepository = orderRepo) as T
@@ -104,7 +112,7 @@ fun LaBajadaNavGraph(
         }
     }
 
-    // ◄ CORREGIDO: Variable gatillo para forzar la lectura de Room al iniciar, loguearse o salir
+    //Variable  para forzar la lectura de Room al iniciar, loguearse o salir
     var checkSessionTrigger by remember { mutableStateOf(0) }
     var uiState by remember { mutableStateOf<NavUiState>(NavUiState.Loading) }
 
@@ -170,7 +178,6 @@ fun LaBajadaNavGraph(
                         viewModel = buyerVm,
                         onRegistrationComplete = {
                             scope.launch {
-                                // ◄ CORREGIDO: Fuerza la actualización al registrarse
                                 checkSessionTrigger++
                                 navController.navigate(Screen.BuyerHome.route) {
                                     popUpTo(Screen.Onboarding.route) { inclusive = true }
@@ -189,7 +196,6 @@ fun LaBajadaNavGraph(
                         onNavigateToMap = { navController.navigate("buyer_map_buyer") },
                         onLogout = {
                             scope.launch {
-                                // ◄ CORREGIDO: Borra la sesión en Room y gatilla el cambio de estado
                                 authDao.logout()
                                 checkSessionTrigger++
                                 navController.navigate(Screen.Login.route) {
@@ -231,7 +237,6 @@ fun LaBajadaNavGraph(
                         viewModel = dashboardVm,
                         onLogout = {
                             scope.launch {
-                                // ◄ CORREGIDO: Borra en Room y gatilla el cambio de estado
                                 authDao.logout()
                                 checkSessionTrigger++
                                 navController.navigate(Screen.Login.route) {

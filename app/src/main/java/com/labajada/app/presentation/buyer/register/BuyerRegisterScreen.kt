@@ -16,15 +16,29 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.labajada.app.core.validation.PasswordValidator
+import com.labajada.app.core.validation.PeruValidators
+import com.labajada.app.core.validation.PasswordRuleRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BuyerRegisterScreen(
-    viewModel: BuyerRegisterViewModel, // ◄ Recibe el ViewModel inyectado desde el NavGraph
+    viewModel: BuyerRegisterViewModel,
     onRegistrationComplete: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    val isEmailValid = remember(uiState.email) {
+        uiState.email.isEmpty() || PasswordValidator.isValidEmail(uiState.email)
+    }
+    val isPhoneValid = remember(uiState.phone) {
+        uiState.phone.isEmpty() || PeruValidators.isValidPhone(uiState.phone)
+    }
+    val passwordCheck = remember(uiState.password) {
+        PasswordValidator.validate(uiState.password)
+    }
+    val showPasswordChecklist = uiState.password.isNotEmpty()
 
     Column(
         modifier = Modifier
@@ -72,14 +86,23 @@ fun BuyerRegisterScreen(
 
             OutlinedTextField(
                 value = uiState.phone,
-                onValueChange = { viewModel.onPhoneChange(it) },
+                onValueChange = { if (it.length <= 9 && it.all(Char::isDigit)) viewModel.onPhoneChange(it) },
                 label = { Text("Número de Celular") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                isError = !isPhoneValid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
+            if (!isPhoneValid) {
+                Text(
+                    text = "Celular inválido (9 dígitos, empieza con 9)",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
 
             OutlinedTextField(
                 value = uiState.departamento,
@@ -108,9 +131,18 @@ fun BuyerRegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                isError = !isEmailValid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
+            if (!isEmailValid) {
+                Text(
+                    text = "Ingresa un formato de correo válido",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
 
             OutlinedTextField(
                 value = uiState.password,
@@ -119,12 +151,26 @@ fun BuyerRegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                isError = showPasswordChecklist && !passwordCheck.isValid,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
             )
 
-            // Muestra dinámicamente un mensaje en pantalla si hay error de persistencia
+            if (showPasswordChecklist) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, top = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    PasswordRuleRow("Mínimo 8 caracteres", passwordCheck.hasMinLength)
+                    PasswordRuleRow("Una letra mayúscula", passwordCheck.hasUppercase)
+                    PasswordRuleRow("Un número", passwordCheck.hasNumber)
+                    PasswordRuleRow("Un carácter especial (!@#\$...)", passwordCheck.hasSpecialChar)
+                }
+            }
+
             if (uiState.error != null) {
                 Text(
                     text = uiState.error!!,
@@ -139,9 +185,11 @@ fun BuyerRegisterScreen(
 
         Button(
             onClick = { viewModel.registerBuyer(onRegistrationComplete) },
-            enabled = uiState.name.isNotBlank() && uiState.phone.isNotBlank() &&
+            enabled = uiState.name.isNotBlank() &&
+                    isPhoneValid && uiState.phone.isNotBlank() &&
                     uiState.departamento.isNotBlank() && uiState.provincia.isNotBlank() &&
-                    uiState.email.isNotBlank() && uiState.password.isNotBlank() && !uiState.isLoading,
+                    isEmailValid && uiState.email.isNotBlank() &&
+                    passwordCheck.isValid && !uiState.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(58.dp)

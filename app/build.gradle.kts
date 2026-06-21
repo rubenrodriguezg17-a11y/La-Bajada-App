@@ -54,6 +54,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.foundation)
     // Android Core tradicional (Por si acaso)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -95,6 +96,9 @@ dependencies {
     // Preferencias Locales y Carga de Fotos
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
+
+    implementation("androidx.compose.material:material-icons-extended")
+
 
     // NOTA: Firebase e Hilt se quedan comentados hasta que configures el proyecto en la consola web de Google
     // implementation(platform(libs.firebase.bom))

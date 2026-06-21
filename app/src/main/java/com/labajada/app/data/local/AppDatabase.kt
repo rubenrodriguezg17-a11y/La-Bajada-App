@@ -9,7 +9,7 @@ import com.labajada.app.data.local.dao.DishDao
 import com.labajada.app.data.local.dao.OrderDao
 import com.labajada.app.data.local.entity.BuyerEntity // ◄ IMPORTACIÓN AGREGADA
 import com.labajada.app.data.local.entity.DishEntity
-import com.labajada.app.data.local.entity.FavoriteDishEntity
+import com.labajada.app.data.local.entity.FavoriteRestaurantEntity
 import com.labajada.app.data.local.entity.OrderEntity
 import com.labajada.app.data.local.entity.RestaurantEntity // ◄ IMPORTACIÓN AGREGADA
 import com.labajada.app.data.local.entity.SearchHistoryEntity
@@ -17,11 +17,12 @@ import com.labajada.app.data.local.entity.SessionEntity // ◄ IMPORTACIÓN AGRE
 
 @Database(
     entities = [
-        FavoriteDishEntity::class,
+        FavoriteRestaurantEntity::class,
+        //FavoriteDishEntity::class,
         SearchHistoryEntity::class,
         DishEntity::class,
         OrderEntity::class,
-        BuyerEntity::class,       // ◄ NUEVA TABLA
+        BuyerEntity::class,
         RestaurantEntity::class,  // ◄ NUEVA TABLA
         SessionEntity::class      // ◄ NUEVA TABLA
     ],

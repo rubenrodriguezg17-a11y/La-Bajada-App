@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun PedidoRowItem(cliente: String, detalle: String, total: String, onDespachado: () -> Unit) {
+fun OrdersTabPedidoRow(cliente: String, detalle: String, total: String, onDespachado: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),

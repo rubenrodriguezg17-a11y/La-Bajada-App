@@ -12,7 +12,6 @@ class LoginUseCase(
             // El repositorio ya guardó la sesión internamente
             return Result.success("BUYER")
         }
-
         // 2. Si no es comprador, intentar como restaurante
         val restaurant = authRepository.loginRestaurant(email, password)
         if (restaurant != null) {

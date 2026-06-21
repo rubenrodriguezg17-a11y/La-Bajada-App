@@ -71,7 +71,6 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 🌟 NUEVO TEXTO DE BIENVENIDA AGREGADO EXACTAMENTE AQUÍ
             Text(
                 text = "¡Te damos la bienvenida a la comunidad gastronómica más picante! Descubre sabores auténticos a la vuelta de la esquina o pon a rugir los motores de tu negocio.",
                 fontSize = 14.sp,
@@ -83,7 +82,6 @@ fun OnboardingScreen(
             )
         }
 
-        // Bloque Inferior: Tarjetas de Selección de Rol (Estilo Bento Box Moderno)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -99,7 +97,6 @@ fun OnboardingScreen(
                 modifier = Modifier.padding(start = 4.dp)
             )
 
-            // Tarjeta 1: Modo Comensal (Rojo Enérgico)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

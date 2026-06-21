@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.labajada.app.domain.model.Dish
 import com.labajada.app.domain.model.OrderStatus
+import com.labajada.app.domain.model.Session
 import com.labajada.app.domain.repository.AuthRepository
 import com.labajada.app.domain.repository.LocalDishRepository
 import com.labajada.app.domain.repository.OrderRepository
@@ -27,23 +28,27 @@ import java.io.FileOutputStream
 class RestaurantDashboardViewModel(
     private val dishRepository: LocalDishRepository,
     private val orderRepository: OrderRepository,
-    private val authRepository: AuthRepository // ◄ INYECCIÓN AGREGADA
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RestaurantDashboardState())
     val uiState: StateFlow<RestaurantDashboardState> = _uiState.asStateFlow()
 
-    // Variable para almacenar el ID del restaurante activo en memoria rápida
     private var currentRestaurantId: String = ""
 
-    // 1. Obtener la sesión activa de forma reactiva
     private val activeSessionFlow = flow {
         val session = authRepository.getActiveSession()
         currentRestaurantId = session?.userId ?: ""
         emit(session)
     }
-
-    // 2. Filtrar platillos reactivamente por el ID del restaurante logueado
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val activeSession = activeSessionFlow.flatMapLatest { session ->
+        if (session != null) {
+            dishRepository.getRestaurantById(session.userId)
+        } else {
+            flow { emit(null) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val platillosDelDia = activeSessionFlow.flatMapLatest { session ->
         if (session != null) {
             dishRepository.getMenuOfTheDay(session.userId)
@@ -63,9 +68,25 @@ class RestaurantDashboardViewModel(
             despachados.sumOf { it.totalPrice }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
+    init {
+        viewModelScope.launch {
+            activeSession.collect { restaurant ->
+                restaurant?.let { res ->
+                    _uiState.update { it.copy(
+                        resNameByOwner = res.restaurantName,
+                        resRucByOwner = res.rucNumber,
+                        resPhoneByOwner = res.phoneNumber,
+                        resCategoryByOwner = res.selectedCategory,
+                        resAddressByOwner = res.addressDetails,
+                        resLatitude = res.latitude,
+                        resLongitude = res.longitude
+                    )}
+                }
+            }
+        }
+    }
     val categoriesDisponibles = listOf("Cevichería", "Criollo", "Fast Food / Bajadas", "Pollería", "Chifa")
 
-    // --- Lógica de UI ---
     fun onTabSelected(index: Int) = _uiState.update { it.copy(selectedTab = index) }
     fun toggleDeleteDialog(show: Boolean) = _uiState.update { it.copy(showDeleteDialog = show) }
     fun toggleFormSheet(show: Boolean) = _uiState.update { it.copy(showFormSheet = show) }
@@ -86,7 +107,27 @@ class RestaurantDashboardViewModel(
     fun onProfileLocationConfirmed(lat: Double, lng: Double) = _uiState.update {
         it.copy(resLatitude = lat, resLongitude = lng, showProfileMapDialog = false)
     }
+    fun guardarDatosDelLocal() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            val restaurantActual = authRepository.getActiveSession()
 
+            val restauranteActualizado = com.labajada.app.domain.model.Restaurant(
+                id = currentRestaurantId.toIntOrNull() ?: 0,
+                restaurantName = state.resNameByOwner,
+                rucNumber = state.resRucByOwner,
+                phoneNumber = state.resPhoneByOwner,
+                selectedCategory = state.resCategoryByOwner,
+                addressDetails = state.resAddressByOwner,
+                latitude = state.resLatitude,
+                longitude = state.resLongitude,
+                email = restaurantActual?.email ?: "",
+                password = ""
+            )
+            dishRepository.updateRestaurantProfile(restauranteActualizado)
+            _uiState.update { it.copy(isEditingProfile = false) }
+        }
+    }
     fun cambiarEstadoPedido(orderId: String, actualStatus: OrderStatus) {
         viewModelScope.launch {
             val siguienteEstado = when (actualStatus) {
@@ -128,7 +169,6 @@ class RestaurantDashboardViewModel(
             } else { finalImagePath = uri.toString() }
         }
 
-        // ◄ SE AGREGA EL RESTAURANT_ID REAL AL MODELO AL MOMENTO DE GUARDAR
         val dishModel = Dish(
             id = if (state.isEditing) state.itemIdToEdit else java.util.UUID.randomUUID().toString(),
             restaurantId = currentRestaurantId,
@@ -157,6 +197,7 @@ class RestaurantDashboardViewModel(
             file.absolutePath
         } catch (e: Exception) { e.printStackTrace(); null }
     }
+
     fun prepararEliminacionPlatillo(index: Int, dishId: String) {
         _uiState.update {
             it.copy(

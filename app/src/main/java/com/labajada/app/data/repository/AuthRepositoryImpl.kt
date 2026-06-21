@@ -17,7 +17,6 @@ class AuthRepositoryImpl(
         val buyerEntity = authDao.loginBuyer(email, password)
 
         if (buyerEntity != null) {
-            // Si el comprador existe, creamos y guardamos su sesión automáticamente con ID fijo 1
             val session = SessionEntity(
                 id = 1,
                 userId = buyerEntity.id.toString(),
@@ -34,10 +33,9 @@ class AuthRepositoryImpl(
         val restaurantEntity = authDao.loginRestaurant(email, password)
 
         if (restaurantEntity != null) {
-            // Si el restaurante existe, creamos y guardamos su sesión automáticamente con ID fijo 1
             val session = SessionEntity(
                 id = 1,
-                userId = restaurantEntity.toString(),
+                userId = restaurantEntity.id.toString(),
                 role = "RESTAURANT",
                 email = restaurantEntity.email
             )

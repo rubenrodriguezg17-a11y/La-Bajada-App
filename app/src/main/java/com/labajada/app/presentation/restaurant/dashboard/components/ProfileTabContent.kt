@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // ◄ CORREGIDO: Importación moderna AutoMirrored
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
@@ -48,7 +48,6 @@ fun ProfileTabContent(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // ◄ CORREGIDO: Se eliminó el parámetro 'grandfather' intruso
                     Text(
                         text = "Información Comercial",
                         fontSize = 18.sp,
@@ -57,11 +56,11 @@ fun ProfileTabContent(
                     )
                     HorizontalDivider(color = Color(0xFFEEEEEE))
 
-                    Text("Huarique: ${state.resNameByOwner}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("RUC: ${state.resRucByOwner}", fontSize = 14.sp, color = Color.Gray)
-                    Text("Contacto: ${state.resPhoneByOwner}", fontSize = 14.sp, color = Color.Gray)
-                    Text("Rubro: ${state.resCategoryByOwner}", fontSize = 14.sp, color = Color.Gray)
-                    Text("Dirección: ${state.resAddressByOwner}", fontSize = 14.sp, color = Color.Gray)
+                    Text("Huarique: ${state.resNameByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("RUC: ${state.resRucByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
+                    Text("Contacto: ${state.resPhoneByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
+                    Text("Rubro: ${state.resCategoryByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
+                    Text("Dirección: ${state.resAddressByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
 
                     Text(
                         text = "Satélite: Lat: ${String.format(Locale.US, "%.4f", state.resLatitude)} | Lon: ${String.format(Locale.US, "%.4f", state.resLongitude)}",
@@ -90,7 +89,6 @@ fun ProfileTabContent(
                     .clickable { viewModel.toggleProfileEdit() }
                     .padding(vertical = 4.dp)
             ) {
-                // ◄ CORREGIDO: Cambiado a la variante AutoMirrored moderna sugerida por Android
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color(0xFF263238))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Cancelar Edición", color = Color(0xFF263238), fontWeight = FontWeight.Bold)
@@ -138,7 +136,6 @@ fun ProfileTabContent(
                     expanded = state.expandedProfileCategory,
                     onDismissRequest = { viewModel.toggleProfileCategoryDropdown() }
                 ) {
-                    // ◄ CORREGIDO: Cambiado a 'categoriesDisponibles' para hacer match exacto con tu ViewModel
                     viewModel.categoriesDisponibles.forEach { item ->
                         DropdownMenuItem(
                             text = { Text(item) },
@@ -182,14 +179,13 @@ fun ProfileTabContent(
             )
 
             Button(
-                onClick = { viewModel.toggleProfileEdit() },
+                onClick = { viewModel.guardarDatosDelLocal() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF000000)),
                 shape = RoundedCornerShape(12.dp),
                 enabled = state.resNameByOwner.isNotBlank() && state.resRucByOwner.isNotBlank()
                         && state.resPhoneByOwner.isNotBlank() && state.resAddressByOwner.isNotBlank()
             ) {
-                // ◄ CORREGIDO: Removido el parámetro 'grandfather' corrupto
                 Text("Guardar Cambios", fontWeight = FontWeight.Bold)
             }
         }

@@ -17,23 +17,22 @@ import com.labajada.app.presentation.restaurant.dashboard.components.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RestaurantDashboardScreen(
-    viewModel: RestaurantDashboardViewModel, // ◄ 1. RECIBE EL VIEWMODEL EXTERNO (Soluciona el error)
+    viewModel: RestaurantDashboardViewModel,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // 2. OBSERVAMOS EL UI STATE ÚNICO Y LOS REPOSITORIOS REACTIVOS
     val uiState by viewModel.uiState.collectAsState()
     val platillosDelDia by viewModel.platillosDelDia.collectAsState()
     val pedidosActivosList by viewModel.pedidosActivos.collectAsState()
-    val gananciasHoyCalculadas by viewModel.gananciasHoy.collectAsState() // Ahora es un StateFlow reactivo
-
+    val gananciasHoyCalculadas by viewModel.gananciasHoy.collectAsState()
+    val session by viewModel.activeSession.collectAsState()
     val sheetState = rememberModalBottomSheetState()
+    val nameRestaurant= session?.restaurantName
 
     Scaffold(
         floatingActionButton = {
-            // Evaluamos la pestaña usando el estado centralizado
             if (uiState.selectedTab == 0) {
                 ExtendedFloatingActionButton(
                     onClick = {
@@ -59,15 +58,24 @@ fun RestaurantDashboardScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Mi Cocina Dashboard",
+                text = "$nameRestaurant!",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF263238),
                 modifier = Modifier.padding(top = 24.dp)
             )
 
+            Text(
+                text = "¿Que haremos hoy?",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF757575),
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Bloque de Métricas (Mantiene tu lógica)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -86,6 +94,7 @@ fun RestaurantDashboardScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // El resto de tus Tabs y Contenidos se mantienen exactamente igual...
             TabRow(
                 selectedTabIndex = uiState.selectedTab,
                 containerColor = Color.Transparent,
@@ -116,7 +125,6 @@ fun RestaurantDashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Renderizado de las pestañas modulares según el estado inmutable
             when (uiState.selectedTab) {
                 0 -> MenuTabContent(viewModel = viewModel, platillosDelDia = platillosDelDia)
                 1 -> OrdersTabContent(viewModel = viewModel, pedidosActivosList = pedidosActivosList)
@@ -125,7 +133,5 @@ fun RestaurantDashboardScreen(
         }
     }
 
-    DashboardModals(
-        viewModel = viewModel
-    )
+    DashboardModals(viewModel = viewModel)
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -13,9 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.labajada.app.core.validation.PasswordValidator
+import com.labajada.app.core.validation.PeruValidators
+import com.labajada.app.core.validation.PasswordRuleRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,8 +31,31 @@ fun RestaurantRegisterScreen(
     val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Lista de categorías estática alineada con el negocio
     val rubrosGastronomicos = listOf("Menú clásico", "Cevichería", "Criollo", "Fast Food / Bajadas", "Pollería", "Chifa")
+
+    val isDocumentoValid = remember(state.rucNumber) {
+        state.rucNumber.isEmpty() || PeruValidators.isValidDocumento(state.rucNumber)
+    }
+    val isPhoneValid = remember(state.phoneNumber) {
+        state.phoneNumber.isEmpty() || PeruValidators.isValidPhone(state.phoneNumber)
+    }
+    val isEmailValid = remember(state.email) {
+        state.email.isEmpty() || PasswordValidator.isValidEmail(state.email)
+    }
+    val passwordCheck = remember(state.password) {
+        PasswordValidator.validate(state.password)
+    }
+    val showPasswordChecklist = state.password.isNotEmpty()
+
+    val isFormReadyToSubmit = state.restaurantName.isNotBlank() &&
+            PeruValidators.isValidDocumento(state.rucNumber) &&
+            PeruValidators.isValidPhone(state.phoneNumber) &&
+            state.selectedCategory.isNotBlank() &&
+            state.addressDetails.isNotBlank() &&
+            PasswordValidator.isValidEmail(state.email) &&
+            passwordCheck.isValid &&
+            state.isLocationSelected &&
+            !state.isLoading
 
     Column(
         modifier = Modifier
@@ -62,22 +90,59 @@ fun RestaurantRegisterScreen(
 
         OutlinedTextField(
             value = state.rucNumber,
-            onValueChange = { if (it.length <= 11) viewModel.onRucChange(it) },
-            label = { Text("Número de RUC") },
+            onValueChange = {
+                if (it.length <= 11 && it.all(Char::isDigit)) {
+                    viewModel.onRucChange(it)
+                }
+            },
+            label = {
+                Text(
+                    text = when (state.rucNumber.length) {
+                        in 0..8 -> "DNI o RUC del Titular"
+                        else -> "Número de RUC"
+                    }
+                )
+            },
+            placeholder = { Text("Ej: 8 dígitos para DNI o 11 para RUC") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            isError = !isDocumentoValid,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
+        if (!isDocumentoValid) {
+        Text(
+            text = "Documento inválido. Debe ser DNI (8 dígitos) o RUC (11 dígitos).",
+            color = Color.Red,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+    }
+
 
         OutlinedTextField(
             value = state.phoneNumber,
-            onValueChange = { viewModel.onPhoneChange(it) },
+            onValueChange = {
+                if (it.length <= 9 && it.all(Char::isDigit)) {
+                    viewModel.onPhoneChange(it)
+                }
+            },
             label = { Text("Teléfono Celular") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            isError = !isPhoneValid,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
         )
-        // --- Selector Desplegable de Rubro Comercial ---
+        if (!isPhoneValid) {
+            Text(
+                text = "Celular inválido (9 dígitos, empieza con 9)",
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
         ExposedDropdownMenuBox(
             expanded = state.expandedCategory,
             onExpandedChange = { viewModel.toggleCategoryDropdown() }
@@ -104,7 +169,6 @@ fun RestaurantRegisterScreen(
             }
         }
 
-        // --- Cuadro de Ubicación Satelital ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,8 +206,18 @@ fun RestaurantRegisterScreen(
             label = { Text("Correo Electrónico") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            isError = !isEmailValid,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
+        if (!isEmailValid) {
+            Text(
+                text = "Ingresa un formato de correo válido",
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
 
         OutlinedTextField(
             value = state.password,
@@ -152,20 +226,38 @@ fun RestaurantRegisterScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation()
+            isError = showPasswordChecklist && !passwordCheck.isValid,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
+
+        if (showPasswordChecklist) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, top = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                PasswordRuleRow("Mínimo 8 caracteres", passwordCheck.hasMinLength)
+                PasswordRuleRow("Una letra mayúscula", passwordCheck.hasUppercase)
+                PasswordRuleRow("Un número", passwordCheck.hasNumber)
+                PasswordRuleRow("Un carácter especial (!@#\$...)", passwordCheck.hasSpecialChar)
+            }
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // --- Botón de Registro Final ---
         Button(
             onClick = { viewModel.registerRestaurant(onRegistrationComplete) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263238)),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF263238),
+                disabledContainerColor = Color(0xFFCFD8DC)
+            ),
             shape = RoundedCornerShape(12.dp),
-            enabled = !state.isLoading
+            enabled = isFormReadyToSubmit
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -173,7 +265,6 @@ fun RestaurantRegisterScreen(
                 Text("Registrar Comercio", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
-
         if (state.error != null) {
             Text(
                 text = state.error ?: "",

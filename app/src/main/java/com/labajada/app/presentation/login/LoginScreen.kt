@@ -10,6 +10,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,21 +28,22 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel, // ◄ 1. Recibe el ViewModel inyectado desde el NavGraph
+    viewModel: LoginViewModel,
     onLoginSuccess: (String) -> Unit,
     onNavigateToOnboarding: () -> Unit
 ) {
-    // 2. Observamos el estado del login desde la arquitectura limpia
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // 3. Validaciones locales en tiempo real para la interfaz
     val isEmailValid = remember(uiState.email) {
         android.util.Patterns.EMAIL_ADDRESS.matcher(uiState.email.trim()).matches()
     }
     val isPasswordValid = remember(uiState.password) {
-        uiState.password.length >= 6
+        uiState.password.isNotBlank()
     }
+
+    //  controla si la contraseña se ve en texto plano o oculta
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -118,27 +122,27 @@ fun LoginScreen(
                 onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF757575)) },
+                trailingIcon = {
+                    val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                    val descripcion = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = icon, contentDescription = descripcion, tint = Color(0xFF757575))
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 enabled = !uiState.isLoading,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(), // ◄ CAMBIO
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                isError = uiState.password.isNotEmpty() && !isPasswordValid,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFD32F2F),
                     focusedLabelColor = Color(0xFFD32F2F)
                 )
             )
-            if (uiState.password.isNotEmpty() && !isPasswordValid) {
-                Text(
-                    text = "Debe tener al menos 6 caracteres",
-                    color = Color.Red,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-            }
 
+            // ◄ COMENTADO TEMPORALMENTE: "¿Olvidaste tu contraseña?" — descomentar cuando esté lista la función
+            /*
             Text(
                 text = "¿Olvidaste tu contraseña?",
                 fontSize = 13.sp,
@@ -149,8 +153,8 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .clickable(enabled = !uiState.isLoading) { /* TODO */ }
             )
+            */
 
-            // Muestra dinámicamente un mensaje de error si las credenciales fallan en Room
             if (uiState.errorMessage != null) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
@@ -168,7 +172,6 @@ fun LoginScreen(
             }
         }
 
-        // Bloque Inferior: Botón de Ingreso Real y Link de Creación de Cuenta
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -178,7 +181,6 @@ fun LoginScreen(
         ) {
             Button(
                 onClick = { viewModel.login(onLoginSuccess) },
-                // El botón se activa solo si el correo es válido, la clave segura y no está cargando
                 enabled = isEmailValid && isPasswordValid && !uiState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -204,8 +206,6 @@ fun LoginScreen(
                     )
                 }
             }
-
-            // Enlace para crear una cuenta nueva si entra por primera vez
             Row(
                 modifier = Modifier.padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.Center,

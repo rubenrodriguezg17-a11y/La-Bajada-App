@@ -21,7 +21,6 @@ class OrderViewModel(
     val pedidosDespachados = orderRepository.getDispatchedOrders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ◄ CORREGIDO: Combinación reactiva y óptima usando operadores nativos de Flow
     val gananciasHoy: StateFlow<Double> = pedidosDespachados
         .combine(pedidosActivos) { despachados, _ ->
             despachados.sumOf { it.dishPrice * it.quantity }
