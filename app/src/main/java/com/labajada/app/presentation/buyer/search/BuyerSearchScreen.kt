@@ -1,5 +1,9 @@
 package com.labajada.app.presentation.buyer.search
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,10 +21,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import com.labajada.app.presentation.order.OrderViewModel // ◄ Asegura esta importación
+import com.labajada.app.presentation.order.OrderViewModel
 import com.labajada.app.presentation.buyer.search.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,6 +36,30 @@ fun BuyerSearchScreen(
     onNavigateToMap: () -> Unit,
     onLogout: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Estado dinámico para validar permisos y evitar el crash de SecurityException
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Lanzador para solicitar permisos si hacen falta
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
     // Estados de control de la UI de las Hojas Desplegables
     var showProfileSheet by remember { mutableStateOf(false) }
     var showCartSheet by remember { mutableStateOf(false) }
@@ -51,28 +80,36 @@ fun BuyerSearchScreen(
         )
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     val ubicacionClienteInicial = remember { LatLng(-8.1116, -79.0287) } // Trujillo por defecto
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(ubicacionClienteInicial, 17f)
     }
-    // Disparador automático al montar la pantalla
-    LaunchedEffect(Unit) {
-        try {
-            val fusedLocationClient = com.google.android.gms.location.LocationServices
-                .getFusedLocationProviderClient(context)
 
-            @android.annotation.SuppressLint("MissingPermission")
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    val currentLatLng = LatLng(location.latitude, location.longitude)
-                    // Desliza suavemente la cámara del cliente a su posición real
-                    cameraPositionState.position = CameraPosition.fromLatLngZoom(currentLatLng, 15f)
+    // Disparador automático que gestiona permisos y mueve la cámara al detectar la ubicación real
+    LaunchedEffect(hasLocationPermission) {
+        if (!hasLocationPermission) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        } else {
+            try {
+                val fusedLocationClient = com.google.android.gms.location.LocationServices
+                    .getFusedLocationProviderClient(context)
+
+                @android.annotation.SuppressLint("MissingPermission")
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val currentLatLng = LatLng(location.latitude, location.longitude)
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(currentLatLng, 15f)
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -194,20 +231,19 @@ fun BuyerSearchScreen(
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
-                    // ◄ CONFIGURACIÓN MODERNA: Vincula el punto azul de ubicación real
+                    // Corregido: Vinculado de forma segura al estado del permiso
                     properties = MapProperties(
-                        isMyLocationEnabled = true
+                        isMyLocationEnabled = hasLocationPermission
                     ),
                     uiSettings = MapUiSettings(
                         zoomControlsEnabled = false,
-                        myLocationButtonEnabled = true,
-                        rotationGesturesEnabled = false, // ◄ BLOQUEADO: El mapa ya no se girará de lado con los dedos
-                        tiltGesturesEnabled = false,     // Bloquea la inclinación en 3D para evitar distorsiones
-                        scrollGesturesEnabled = true,    // ◄ PERMITIDO: El usuario sí puede desplazarse y correr el mapa
-                        zoomGesturesEnabled = true   // Permite recalibrar si el cliente camina
+                        myLocationButtonEnabled = hasLocationPermission,
+                        rotationGesturesEnabled = false,
+                        tiltGesturesEnabled = false,
+                        scrollGesturesEnabled = true,
+                        zoomGesturesEnabled = true
                     )
                 ) {
-                    // conservar tus marcadores de huariques:
                     huariquesRadar.forEach { huarique ->
                         Marker(
                             state = rememberMarkerState(
@@ -220,7 +256,6 @@ fun BuyerSearchScreen(
                 }
             }
         }
-
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -236,7 +271,6 @@ fun BuyerSearchScreen(
             }
         )
     }
-
 
     BuyerSearchSheets(
         showCartSheet = showCartSheet,

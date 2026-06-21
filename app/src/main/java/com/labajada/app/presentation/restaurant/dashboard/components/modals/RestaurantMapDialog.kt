@@ -1,6 +1,10 @@
 package com.labajada.app.presentation.restaurant.dashboard.components.modals
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -13,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -28,6 +33,28 @@ fun RestaurantMapDialog(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // Estado para controlar si el permiso de ubicación fue concedido
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Lanzador para solicitar el permiso dinámicamente si no está concedido
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
     val initialPosition = remember(initialLatitude, initialLongitude) {
         LatLng(initialLatitude, initialLongitude)
     }
@@ -36,18 +63,28 @@ fun RestaurantMapDialog(
         position = CameraPosition.fromLatLngZoom(initialPosition, 17f)
     }
 
-    LaunchedEffect(Unit) {
-        try {
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    val currentLatLng = LatLng(location.latitude, location.longitude)
-                    markerState.position = currentLatLng
-                    cameraState.position = CameraPosition.fromLatLngZoom(currentLatLng, 16f)
+    // Efecto para solicitar permisos e intentar obtener la ubicación actual
+    LaunchedEffect(hasLocationPermission) {
+        if (!hasLocationPermission) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        } else {
+            try {
+                val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val currentLatLng = LatLng(location.latitude, location.longitude)
+                        markerState.position = currentLatLng
+                        cameraState.position = CameraPosition.fromLatLngZoom(currentLatLng, 16f)
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -80,9 +117,10 @@ fun RestaurantMapDialog(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraState,
                         onMapClick = { latLng -> markerState.position = latLng },
-                        properties = MapProperties(isMyLocationEnabled = true),
+                        // Modificado: Ahora solo se activa si el permiso fue concedido
+                        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
                         uiSettings = MapUiSettings(
-                            myLocationButtonEnabled = true,
+                            myLocationButtonEnabled = hasLocationPermission,
                             rotationGesturesEnabled = false,
                             scrollGesturesEnabled = true,
                         )
