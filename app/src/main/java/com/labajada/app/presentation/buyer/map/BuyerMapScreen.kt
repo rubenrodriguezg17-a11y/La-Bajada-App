@@ -25,7 +25,6 @@ import com.google.maps.android.compose.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-// Clase temporal para maquetar los locales del mapa antes de conectarlos a Room
 data class HuariqueSimulado(
     val id: String,
     val nombre: String,
@@ -38,7 +37,7 @@ data class HuariqueSimulado(
 
 @Composable
 fun BuyerMapScreen(
-    onNavigateBack: () -> Unit // Evento para regresar al buscador al pulsar atrás
+    onNavigateBack: () -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
@@ -58,21 +57,18 @@ fun BuyerMapScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 🗺️ EL MAPA DE GOOGLE FLUIDO DE FONDO
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = false), // Cambiar a true cuando manejes permisos
-            uiSettings = MapUiSettings(zoomControlsEnabled = false)  // Ocultamos botones feos de zoom
+            properties = MapProperties(isMyLocationEnabled = false),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false)
         ) {
-            // Dibujamos un marcador interactivo por cada restaurante simulado
             huariquesDePrueba.forEach { huarique ->
                 Marker(
                     state = rememberMarkerState(position = LatLng(huarique.latitud, huarique.longitud)),
                     title = huarique.nombre,
                     snippet = "${huarique.categoria} • ${huarique.rating}",
                     onClick = {
-                        // 💡 2. CORRECCIÓN AQUÍ: Usamos el scope de Compose para lanzar la animación de forma segura
                         scope.launch {
                                 cameraPositionState.animate(
                                 com.google.android.gms.maps.CameraUpdateFactory.newLatLng(

@@ -2,18 +2,16 @@ plugins {
     alias(libs.plugins.android.application)
     id("com.google.devtools.ksp")
     alias(libs.plugins.compose.compiler)
-    // El plugin de Firebase y Hilt los comentamos por ahora hasta que enlaces tu Firebase Console
-    // alias(libs.plugins.google-services)
-    // alias(libs.plugins.hilt-android)
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.labajada.app"
-    compileSdk = 36 // Cambiado a 34 estable para asegurar compatibilidad total con librerías de mapas y Compose de este año
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.labajada.app"
-        minSdk = 26 // Bajado a 26 (Android 8) para que corra en la gran mayoría de celulares en Trujillo, no solo en los últimos de gama alta
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -55,15 +53,20 @@ android {
 
 dependencies {
     implementation(libs.androidx.compose.foundation)
-    // Android Core tradicional (Por si acaso)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.activity.ktx)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    //FireBase
+    implementation(platform("com.google.firebase:firebase-bom:34.15.0"))
+    implementation("com.google.firebase:firebase-analytics")
 
     // OBLIGATORIO: Soporte e Implementación de Jetpack Compose (UI Moderna)
+    implementation("com.google.firebase:firebase-auth")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -100,14 +103,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
 
-    // NOTA: Firebase e Hilt se quedan comentados hasta que configures el proyecto en la consola web de Google
-    // implementation(platform(libs.firebase.bom))
-    // implementation(libs.firebase.firestore)
-    // implementation(libs.firebase.auth)
-    // implementation(libs.hilt.android)
-    // ksp(libs.hilt.compiler)
-    // implementation(libs.androidx.hilt.navigation.compose)
-
+    implementation("com.google.firebase:firebase-firestore")
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

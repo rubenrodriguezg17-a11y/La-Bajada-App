@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.labajada.app.core.extensions.toPrecioDouble
 import com.labajada.app.domain.model.Dish
 import com.labajada.app.presentation.buyer.search.BuyerSearchViewModel
 import com.labajada.app.presentation.buyer.search.RadarHuarique
@@ -46,7 +47,7 @@ fun BuyerSearchSheets(
         val huarique = selectedHuariqueForCart
         val plato = selectedDish
 
-        val precioPlato = plato.price.toDoubleOrNull() ?: 0.0 // ◄ precio REAL del plato
+        val precioPlato = plato.price.toPrecioDouble()
         val montoTotalCalculado = precioPlato * cantidadSeleccionada
 
         ModalBottomSheet(onDismissRequest = onDismissCart, containerColor = Color.White) {

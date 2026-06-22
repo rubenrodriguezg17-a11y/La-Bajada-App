@@ -9,13 +9,11 @@ class RegisterRestaurantUseCase(
 ) {
     suspend fun execute(restaurant: Restaurant): Result<Unit> {
         return try {
-            // 1. Guardar el restaurante y capturar el ID real generado por Room
-            val generatedId = authRepository.registerRestaurant(restaurant)
+            val realHashId = authRepository.registerRestaurant(restaurant)
 
-            // 2. Crear y guardar la sesión activa con el ID correcto
             authRepository.saveSession(
                 Session(
-                    userId = generatedId.toString(),
+                    userId = realHashId.toString(),
                     email = restaurant.email,
                     role = "RESTAURANT"
                 )

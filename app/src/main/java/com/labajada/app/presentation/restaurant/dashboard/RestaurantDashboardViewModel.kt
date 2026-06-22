@@ -49,6 +49,10 @@ class RestaurantDashboardViewModel(
             flow { emit(null) }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val fallbackRestaurantName = activeSessionFlow.flatMapLatest { session ->
+        flow { emit(session?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() } ?: "Huarique") }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Huarique")
     val platillosDelDia = activeSessionFlow.flatMapLatest { session ->
         if (session != null) {
             dishRepository.getMenuOfTheDay(session.userId)

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "905219120806",
+    "project_id": "la-bajada-app",
+    "storage_bucket": "la-bajada-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905219120806:android:e7ec98c36dc9d328eb5e67",
+        "android_client_info": {
+          "package_name": "com.labajada.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCj_N2AyZmN3InkbNZigvb8Y6fS4o4rIb8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

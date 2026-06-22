@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
 
         val database = AppDatabase.getDatabase(applicationContext)
         val authDao = database.authDao()
+        val dishDao=database.dishDao()
 
         setContent {
             MaterialTheme {
@@ -23,7 +24,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ){
-                    LaBajadaNavGraph(authDao = authDao)
+                    LaBajadaNavGraph(
+                        authDao = authDao,
+                        dishDao = dishDao
+                    )
                 }
             }
         }

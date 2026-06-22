@@ -23,10 +23,10 @@ import com.labajada.app.data.local.entity.SessionEntity // ◄ IMPORTACIÓN AGRE
         DishEntity::class,
         OrderEntity::class,
         BuyerEntity::class,
-        RestaurantEntity::class,  // ◄ NUEVA TABLA
-        SessionEntity::class      // ◄ NUEVA TABLA
+        RestaurantEntity::class,
+        SessionEntity::class
     ],
-    version = 3, // ◄ Incrementamos a versión 3 porque cambiamos la estructura de tablas
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -58,4 +58,6 @@ interface DishDao {
 
     @Update
     suspend fun updateRestaurantProfile(restaurant: RestaurantEntity)
+    @Query("SELECT * FROM restaurants WHERE id = :restaurantId LIMIT 1")
+    suspend fun getRestaurantByIdOnce(restaurantId: String): RestaurantEntity?
 }

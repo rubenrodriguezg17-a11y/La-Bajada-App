@@ -15,7 +15,7 @@ class RegisterBuyerUseCase(
             // 2. Crear sesión activa usando el ID correcto convertido a String (o Int según tu modelo)
             authRepository.saveSession(
                 Session(
-                    userId = generatedId.toString(), // <-- Aquí usas el ID real de Room
+                    userId = generatedId.toString(),
                     email = buyer.email,
                     role = "BUYER"
                 )

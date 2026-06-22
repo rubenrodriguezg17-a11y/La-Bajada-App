@@ -59,7 +59,7 @@ androidx-navigation-compose = { module = "androidx.navigation:navigation-compose
 # ---- AGREGADOS PARA FIREBASE ( Firestore y Auth ) ----
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics-ktx" }
-firebase-firestore = { module = "com.google.firebase:firebase-firestore-ktx" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-auth = { module = "com.google.firebase:firebase-auth-ktx" }
 
 # ---- AGREGADOS PARA HILT (Inyección de Dependencias) ----

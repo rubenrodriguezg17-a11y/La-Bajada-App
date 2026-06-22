@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.labajada.app.data.local.AppDatabase
 import com.labajada.app.data.local.dao.AuthDao
+import com.labajada.app.data.local.dao.DishDao
 import com.labajada.app.data.repository.AuthRepositoryImpl
 import com.labajada.app.data.repository.LocalRestaurantRepositoryImpl
 import com.labajada.app.data.repository.OrderRepositoryImpl
@@ -51,13 +52,14 @@ sealed interface NavUiState {
 
 @Composable
 fun LaBajadaNavGraph(
-    authDao: AuthDao
+    authDao: AuthDao,
+    dishDao : DishDao
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val authRepository: AuthRepository = remember { AuthRepositoryImpl(authDao) }
+    val authRepository: AuthRepository = remember { AuthRepositoryImpl(authDao, dishDao) }
     val loginUseCase = remember { LoginUseCase(authRepository) }
     val registerBuyerUseCase = remember { RegisterBuyerUseCase(authRepository) }
     val registerRestaurantUseCase = remember { RegisterRestaurantUseCase(authRepository) }
@@ -214,14 +216,12 @@ fun LaBajadaNavGraph(
                     )
                 }
 
-                // --- FLUJO 3: RUTA RESTAURANTE CON REGISTRO REAL ---
                 composable(route = Screen.RegisterRestaurant.route) {
                     val restaurantVm: RestaurantRegisterViewModel = viewModel(factory = viewModelFactory)
                     RestaurantRegisterScreen(
                         viewModel = restaurantVm,
                         onRegistrationComplete = {
                             scope.launch {
-                                // ◄ CORREGIDO: Fuerza la actualización al registrarse
                                 checkSessionTrigger++
                                 navController.navigate(Screen.RestaurantHome.route) {
                                     popUpTo(Screen.Onboarding.route) { inclusive = true }

@@ -29,7 +29,8 @@ fun RestaurantDashboardScreen(
     val gananciasHoyCalculadas by viewModel.gananciasHoy.collectAsState()
     val session by viewModel.activeSession.collectAsState()
     val sheetState = rememberModalBottomSheetState()
-    val nameRestaurant= session?.restaurantName
+    val backupName by viewModel.fallbackRestaurantName.collectAsState()
+    val nameRestaurant = session?.restaurantName ?: uiState.resNameByOwner ?: backupName
 
     Scaffold(
         floatingActionButton = {

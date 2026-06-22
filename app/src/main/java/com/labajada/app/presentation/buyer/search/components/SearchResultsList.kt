@@ -59,7 +59,7 @@ fun SearchResultsList(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 350.dp) // Limita la altura para que no opaque al mapa superior
+                    .heightIn(max = 350.dp)
             ) {
                 itemsIndexed(platosEncontrados, key = { index, plato -> "${plato.id}_$index" }) { index, plato ->
                     Card(
@@ -99,7 +99,7 @@ fun SearchResultsList(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "S/. ${plato.price}",
+                                    text = "${plato.price}",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFFD32F2F)
