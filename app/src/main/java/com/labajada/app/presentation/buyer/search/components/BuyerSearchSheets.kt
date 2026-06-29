@@ -30,7 +30,7 @@ fun BuyerSearchSheets(
     showCartSheet: Boolean,
     onDismissCart: () -> Unit,
     selectedHuariqueForCart: RadarHuarique?,
-    selectedDish: Dish?, // ◄ CAMBIO: ahora recibimos el plato real, no un String
+    selectedDish: Dish?,
     cantidadSeleccionada: Int,
     onCantidadChange: (Int) -> Unit,
     orderViewModel: OrderViewModel,

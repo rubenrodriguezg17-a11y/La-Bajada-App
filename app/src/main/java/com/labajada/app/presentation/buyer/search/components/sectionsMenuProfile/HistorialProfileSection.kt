@@ -36,18 +36,11 @@ fun HistorialProfileSection(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Historial de búsqueda",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF212121)
-            )
+            Text(text = "Historial de búsqueda", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF212121))
             if (historialReal.isNotEmpty()) {
                 Text(
                     text = "Limpiar todo",
@@ -55,7 +48,7 @@ fun HistorialProfileSection(
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFD32F2F),
                     modifier = Modifier.clickable {
-                        viewModel.borrarTodoELHistorial()
+                        viewModel.borrarTodoElHistorial()  // ← corregido (L minúscula)
                         onSectionChange("MENU")
                     }
                 )
@@ -64,9 +57,7 @@ fun HistorialProfileSection(
 
         if (historialReal.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text("Aún no tienes antojos registrados.", color = Color.Gray, fontSize = 14.sp)
@@ -76,25 +67,15 @@ fun HistorialProfileSection(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                itemsIndexed(historialReal, key = { index, item -> "${item.searchQuery}_$index" }) { index, item ->
+                itemsIndexed(historialReal, key = { index, item -> "${item}_$index" }) { _, item ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = "Búsqueda reciente",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD32F2F)
-                            )
+                            Text(text = "Búsqueda reciente", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = item.searchQuery,
-                                fontSize = 15.sp,
-                                color = Color(0xFF212121),
-                                fontWeight = FontWeight.Medium
-                            )
+                            Text(text = item, fontSize = 15.sp, color = Color(0xFF212121), fontWeight = FontWeight.Medium)  // ← String directo
                         }
                     }
                 }

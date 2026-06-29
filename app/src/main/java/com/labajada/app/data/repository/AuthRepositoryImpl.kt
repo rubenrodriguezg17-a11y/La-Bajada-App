@@ -1,9 +1,10 @@
 package com.labajada.app.data.repository
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.FirebaseAuth
 import com.labajada.app.data.local.dao.AuthDao
-import com.labajada.app.data.local.dao.DishDao
+import com.labajada.app.data.local.dao.BuyerDao
+import com.labajada.app.data.local.dao.RestaurantDao
 import com.labajada.app.data.local.entity.BuyerEntity
 import com.labajada.app.data.local.entity.RestaurantEntity
 import com.labajada.app.data.local.entity.SessionEntity
@@ -16,22 +17,21 @@ import kotlinx.coroutines.tasks.await
 
 class AuthRepositoryImpl(
     private val authDao: AuthDao,
-    private val dishDao: DishDao
+    private val buyerDao: BuyerDao,
+    private val restaurantDao: RestaurantDao
 ) : AuthRepository {
 
     private val firebaseAuth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
-    // ◄ 1. LOGIN COMPRADOR CORREGIDO
     override suspend fun loginBuyer(email: String, password: String): Buyer? {
         return try {
             val authResult: AuthResult = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             val firebaseUid = authResult.user?.uid ?: return null
+            val numericId = firebaseUid.hashCode().toString()
 
-            val numericIdString = firebaseUid.hashCode().toString()
-            val buyerEntity = dishDao.getBuyerById(numericIdString)
-
+            val buyerEntity = buyerDao.getBuyerById(numericId)
             if (buyerEntity != null) {
-                saveSession(Session(userId = numericIdString, email = email, role = "BUYER"))
+                saveSession(Session(userId = numericId, email = email, role = "BUYER"))
                 buyerEntity.toDomain()
             } else null
         } catch (e: Exception) {
@@ -44,12 +44,11 @@ class AuthRepositoryImpl(
         return try {
             val authResult: AuthResult = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             val firebaseUid = authResult.user?.uid ?: return null
+            val numericId = firebaseUid.hashCode().toString()
 
-            val numericIdString = firebaseUid.hashCode().toString()
-            val restaurantEntity = dishDao.getRestaurantByIdOnce(numericIdString)
-
+            val restaurantEntity = restaurantDao.getRestaurantByIdOnce(numericId)
             if (restaurantEntity != null) {
-                saveSession(Session(userId = numericIdString, email = email, role = "RESTAURANT"))
+                saveSession(Session(userId = numericId, email = email, role = "RESTAURANT"))
                 restaurantEntity.toDomain()
             } else null
         } catch (e: Exception) {
@@ -59,11 +58,11 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun registerBuyer(buyer: Buyer): Long {
-        try {
+        return try {
             val authResult: AuthResult = firebaseAuth.createUserWithEmailAndPassword(buyer.email, buyer.password).await()
             val firebaseUid = authResult.user?.uid ?: throw Exception("No se obtuvo el UID de Firebase.")
 
-            val buyerEntity = BuyerEntity(
+            val entity = BuyerEntity(
                 id = firebaseUid.hashCode(),
                 name = buyer.name,
                 phone = buyer.phone,
@@ -72,21 +71,20 @@ class AuthRepositoryImpl(
                 email = buyer.email,
                 password = ""
             )
-            return authDao.insertBuyer(buyerEntity)
+            buyerDao.insertBuyer(entity)
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
         }
     }
 
-    // ◄ 4. REGISTRO RESTAURANTE
     override suspend fun registerRestaurant(restaurant: Restaurant): Long {
-        try {
+        return try {
             val authResult: AuthResult = firebaseAuth.createUserWithEmailAndPassword(restaurant.email, restaurant.password).await()
             val firebaseUid = authResult.user?.uid ?: throw Exception("No se obtuvo el UID de Firebase.")
 
-            val restaurantEntity = RestaurantEntity(
-                id = firebaseUid.hashCode(), // ◄ Este es el valor real (Ej: 4829302)
+            val entity = RestaurantEntity(
+                id = firebaseUid.hashCode(),
                 restaurantName = restaurant.restaurantName,
                 rucNumber = restaurant.rucNumber,
                 phoneNumber = restaurant.phoneNumber,
@@ -97,9 +95,8 @@ class AuthRepositoryImpl(
                 email = restaurant.email,
                 password = ""
             )
-
-            authDao.insertRestaurant(restaurantEntity)
-            return firebaseUid.hashCode().toLong() // ◄ CORREGIDO: Retornamos el hash real insertado, no el index de SQLite
+            restaurantDao.insertRestaurant(entity)
+            firebaseUid.hashCode().toLong()
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
@@ -108,13 +105,14 @@ class AuthRepositoryImpl(
 
     override suspend fun saveSession(session: Session) {
         authDao.logout()
-        val entity = SessionEntity(
-            id = 1,
-            userId = session.userId,
-            email = session.email,
-            role = session.role
+        authDao.saveSession(
+            SessionEntity(
+                id = 1,
+                userId = session.userId,
+                email = session.email,
+                role = session.role
+            )
         )
-        authDao.saveSession(entity)
     }
 
     override suspend fun logout() {

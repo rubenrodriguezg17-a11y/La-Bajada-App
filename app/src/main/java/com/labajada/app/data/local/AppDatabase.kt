@@ -5,8 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.labajada.app.data.local.dao.AuthDao // ◄ IMPORTACIÓN AGREGADA
+import com.labajada.app.data.local.dao.BuyerDao
 import com.labajada.app.data.local.dao.DishDao
 import com.labajada.app.data.local.dao.OrderDao
+import com.labajada.app.data.local.dao.RestaurantDao
+import com.labajada.app.data.local.dao.SearchDao
 import com.labajada.app.data.local.entity.BuyerEntity // ◄ IMPORTACIÓN AGREGADA
 import com.labajada.app.data.local.entity.DishEntity
 import com.labajada.app.data.local.entity.FavoriteRestaurantEntity
@@ -30,10 +33,12 @@ import com.labajada.app.data.local.entity.SessionEntity // ◄ IMPORTACIÓN AGRE
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-
+    abstract fun authDao(): AuthDao
+    abstract fun buyerDao(): BuyerDao
+    abstract fun restaurantDao(): RestaurantDao
+    abstract fun searchDao(): SearchDao
     abstract fun dishDao(): DishDao
     abstract fun orderDao(): OrderDao
-    abstract fun authDao(): AuthDao // ◄ NUEVO DAO EXPUESTO
 
     companion object {
         @Volatile

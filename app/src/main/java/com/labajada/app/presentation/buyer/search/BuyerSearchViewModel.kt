@@ -6,10 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
-import com.labajada.app.data.local.dao.DishDao
-import com.labajada.app.data.mapper.toDomain
 import com.labajada.app.domain.model.Dish
+import com.labajada.app.domain.model.FavoriteRestaurant
 import com.labajada.app.domain.repository.AuthRepository
+import com.labajada.app.domain.repository.DishRepository
+import com.labajada.app.domain.repository.RestaurantRepository
+import com.labajada.app.domain.usecase.auth.GetActiveBuyerUseCase
+import com.labajada.app.domain.usecase.search.ClearSearchHistoryUseCase
+import com.labajada.app.domain.usecase.search.GetAllDishesUseCase
 import com.labajada.app.domain.usecase.search.GetRecentSearchHistoryUseCase
 import com.labajada.app.domain.usecase.search.ManageFavoriteRestaurantUseCase
 import com.labajada.app.domain.usecase.search.SaveSearchQueryUseCase
@@ -22,7 +26,11 @@ class BuyerSearchViewModel(
     private val saveSearchQueryUseCase: SaveSearchQueryUseCase,
     private val getRecentSearchHistoryUseCase: GetRecentSearchHistoryUseCase,
     private val manageFavoriteRestaurantUseCase: ManageFavoriteRestaurantUseCase,
-    private val dishDao: DishDao,
+    private val getActiveBuyerUseCase: GetActiveBuyerUseCase,       // ← nuevo
+    private val clearSearchHistoryUseCase: ClearSearchHistoryUseCase, // ← nuevo
+    private val getAllDishesUseCase: GetAllDishesUseCase,             // ← nuevo
+    private val dishRepository: DishRepository,
+    private val restaurantRepository: RestaurantRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
@@ -41,16 +49,12 @@ class BuyerSearchViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // --- NUEVO: menú real del huarique seleccionado al tocar "Ver menú" ---
     private val _restaurantIdParaMenu = MutableStateFlow<String?>(null)
 
     val menuDelHuariqueSeleccionado: StateFlow<List<Dish>> = _restaurantIdParaMenu
         .flatMapLatest { id ->
-            if (id != null) {
-                dishDao.getRestaurantMenu(id).map { entities -> entities.map { it.toDomain() } }
-            } else {
-                flowOf(emptyList())
-            }
+            if (id != null) dishRepository.getMenuOfTheDay(id)
+            else flowOf(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -61,33 +65,43 @@ class BuyerSearchViewModel(
     fun cerrarMenuDeHuarique() {
         _restaurantIdParaMenu.value = null
     }
-    // --- FIN NUEVO ---
 
     val searchHistory = getRecentSearchHistoryUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val restaurantesFavoritosRoom = dishDao.getAllFavoriteRestaurants()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val restaurantesFavoritosRoom: StateFlow<List<FavoriteRestaurant>> =
+        manageFavoriteRestaurantUseCase.getAll()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val huariquesDesdeBaseDeDatos = dishDao.getAllRestaurants()
-        .combine(_userLocation) { listaEntities, ubicacionActual ->
-            listaEntities.map { entity ->
+    val huariquesDesdeBaseDeDatos = restaurantRepository.getAllRestaurants()
+        .combine(_userLocation) { listaRestaurants, ubicacionActual ->
+            listaRestaurants.map { restaurant ->
                 RadarHuarique(
-                    id = entity.id.toString(),
-                    nombre = entity.restaurantName,
-                    category = entity.selectedCategory,
-                    precioPromedio = 15.0, // referencial, ya no se usa para cobrar
+                    id = restaurant.id.toString(),
+                    nombre = restaurant.restaurantName,
+                    category = restaurant.selectedCategory,
+                    precioPromedio = 15.0,
                     distancia = calcularDistanciaReal(
                         ubicacionActual.latitude,
                         ubicacionActual.longitude,
-                        entity.latitude,
-                        entity.longitude
+                        restaurant.latitude,
+                        restaurant.longitude
                     ),
-                    latitud = entity.latitude,
-                    longitud = entity.longitude
+                    latitud = restaurant.latitude,
+                    longitud = restaurant.longitude
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            val buyer = getActiveBuyerUseCase()  // ← resuelve sesión + busca buyer en un paso
+            if (buyer != null) {
+                _currentBuyerName.value = buyer.name
+                _currentBuyerEmail.value = buyer.email
+            }
+        }
+    }
 
     @SuppressLint("MissingPermission")
     fun rastrearUbicacionActual(context: Context) {
@@ -100,19 +114,6 @@ class BuyerSearchViewModel(
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-
-    init {
-        viewModelScope.launch {
-            val session = authRepository.getActiveSession()
-            if (session != null) {
-                _currentBuyerEmail.value = session.email
-                val buyerEntity = dishDao.getBuyerById(session.userId)
-                if (buyerEntity != null) {
-                    _currentBuyerName.value = buyerEntity.name
-                }
-            }
         }
     }
 
@@ -130,25 +131,38 @@ class BuyerSearchViewModel(
 
     fun agregarRestauranteAFavoritos(id: String, nombre: String, categoria: String, direccion: String) {
         viewModelScope.launch {
-            val fRestaurant = com.labajada.app.data.local.entity.FavoriteRestaurantEntity(
-                restaurantId = id,
-                restaurantName = nombre,
-                category = categoria,
-                address = direccion
-            )
-            dishDao.insertFavoriteRestaurant(fRestaurant)
+            manageFavoriteRestaurantUseCase.add(id, nombre, categoria, direccion)
         }
     }
 
     fun quitarRestauranteDeFavoritos(id: String) {
         viewModelScope.launch {
-            dishDao.deleteFavoriteRestaurantById(id)
+            manageFavoriteRestaurantUseCase.remove(id)
         }
     }
 
-    fun borrarTodoELHistorial() {
+    fun borrarTodoElHistorial() {
         viewModelScope.launch {
-            dishDao.clearAllSearchHistory()
+            clearSearchHistoryUseCase()  // ← resuelto
+        }
+    }
+
+    fun ejecutarBusquedaInteligente() {
+        val query = _searchQuery.value.trim().lowercase(java.util.Locale.ROOT)
+        if (query.isBlank()) return
+
+        viewModelScope.launch {
+            try {
+                saveSearchQueryUseCase(query)
+                val todosLosPlatos = getAllDishesUseCase()  // ← resuelto
+                val platosFiltrados = todosLosPlatos.filter { plato ->
+                    val nombrePlato = plato.name.lowercase(java.util.Locale.ROOT)
+                    nombrePlato.contains(query) || calcularSimilitudTexto(nombrePlato, query) >= 0.6
+                }
+                _platosEncontrados.value = platosFiltrados
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -161,37 +175,13 @@ class BuyerSearchViewModel(
                 Math.sin(dLon / 2) * Math.sin(dLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         val distanciaEnKm = radioTierra * c
-
-        return if (distanciaEnKm < 1) {
-            "${(distanciaEnKm * 1000).toInt()} metros"
-        } else {
-            String.format(java.util.Locale.US, "%.1f km", distanciaEnKm)
-        }
-    }
-
-    fun ejecutarBusquedaInteligente() {
-        val query = _searchQuery.value.trim().lowercase(java.util.Locale.ROOT)
-        if (query.isBlank()) return
-
-        viewModelScope.launch {
-            try {
-                saveSearchQueryUseCase(query)
-                val todosLosPlatos = dishDao.getAllMenuDishesOnce()
-                val platosFiltrados = todosLosPlatos.filter { plato ->
-                    val nombrePlato = plato.name.lowercase(java.util.Locale.ROOT)
-                    nombrePlato.contains(query) || calcularSimilitudTexto(nombrePlato, query) >= 0.6
-                }
-                _platosEncontrados.value = platosFiltrados.map { it.toDomain() }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        return if (distanciaEnKm < 1) "${(distanciaEnKm * 1000).toInt()} metros"
+        else String.format(java.util.Locale.US, "%.1f km", distanciaEnKm)
     }
 
     private fun calcularSimilitudTexto(s1: String, s2: String): Double {
         val longitudMaxima = maxOf(s1.length, s2.length)
         if (longitudMaxima == 0) return 1.0
-
         val costo = IntArray(s2.length + 1) { it }
         for (i in 1..s1.length) {
             var anterior = costo[0]
@@ -203,7 +193,6 @@ class BuyerSearchViewModel(
                 anterior = temp
             }
         }
-        val distancia = costo[s2.length]
-        return (longitudMaxima - distancia).toDouble() / longitudMaxima
+        return (longitudMaxima - costo[s2.length]).toDouble() / longitudMaxima
     }
 }

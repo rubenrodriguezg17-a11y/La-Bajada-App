@@ -2,10 +2,12 @@ package com.labajada.app.data.mapper
 
 import com.labajada.app.data.local.entity.BuyerEntity
 import com.labajada.app.data.local.entity.DishEntity
+import com.labajada.app.data.local.entity.FavoriteRestaurantEntity
 import com.labajada.app.data.local.entity.RestaurantEntity
 import com.labajada.app.data.local.entity.SessionEntity
 import com.labajada.app.domain.model.Buyer
 import com.labajada.app.domain.model.Dish
+import com.labajada.app.domain.model.FavoriteRestaurant
 import com.labajada.app.domain.model.Restaurant
 import com.labajada.app.domain.model.Session
 
@@ -86,4 +88,20 @@ fun DishEntity.toDomain() = Dish(
     name = name,
     price = price,
     imagePath = imagePath
+)
+
+fun FavoriteRestaurantEntity.toDomain() = FavoriteRestaurant(
+    restaurantId = restaurantId,
+    restaurantName = restaurantName,
+    category = category,
+    address = address,
+    timestamp = timestamp
+)
+
+fun FavoriteRestaurant.toEntity() = FavoriteRestaurantEntity(
+    restaurantId = restaurantId,
+    restaurantName = restaurantName,
+    category = category,
+    address = address,
+    timestamp = timestamp
 )

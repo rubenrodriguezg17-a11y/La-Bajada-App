@@ -1,11 +1,10 @@
 package com.labajada.app.domain.usecase.search
 
-import com.labajada.app.data.local.entity.SearchHistoryEntity
-import com.labajada.app.domain.repository.LocalDishRepository
+import com.labajada.app.domain.repository.SearchRepository
 import kotlinx.coroutines.flow.Flow
 
-class GetRecentSearchHistoryUseCase(private val repository: LocalDishRepository) {
-    operator fun invoke(): Flow<List<SearchHistoryEntity>> {
+class GetRecentSearchHistoryUseCase(private val repository: SearchRepository) {
+    operator fun invoke(): Flow<List<String>> {
         return repository.getSearchHistory()
     }
 }

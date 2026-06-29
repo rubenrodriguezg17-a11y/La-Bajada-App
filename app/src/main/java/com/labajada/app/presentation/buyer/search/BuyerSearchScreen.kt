@@ -35,69 +35,52 @@ import com.labajada.app.presentation.buyer.search.components.*
 fun BuyerSearchScreen(
     searchViewModel: BuyerSearchViewModel,
     orderViewModel: OrderViewModel,
-    onNavigateToMap: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
-    val platosEncontrados by searchViewModel.platosEncontrados.collectAsState(initial = emptyList())
+    val platosEncontrados by searchViewModel.platosEncontrados.collectAsState()
+    val huariquesRadar by searchViewModel.huariquesDesdeBaseDeDatos.collectAsState()
+    val ultimasBusquedas by searchViewModel.searchHistory.collectAsState()
+    val queryText by searchViewModel.searchQuery.collectAsState()
+    val menuDelHuarique by searchViewModel.menuDelHuariqueSeleccionado.collectAsState()
 
-    var hasLocationPermission by remember {
+    var state by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            BuyerSearchState(
+                hasLocationPermission =
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            )
         )
+    }
+
+    val ubicacionClienteInicial = remember { LatLng(-8.1116, -79.0287) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(ubicacionClienteInicial, 17f)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        state = state.copy(
+            hasLocationPermission =
+                permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        )
     }
-
-    // Trigger que se incrementa cuando el usuario acepta encender el GPS desde el diálogo nativo
-    var locationTrigger by remember { mutableStateOf(0) }
-
-    // Indicador de carga mientras se obtiene el fix de ubicación
-    var isLoadingLocation by remember { mutableStateOf(false) }
 
     val gpsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // El usuario aceptó encender el GPS -> reintentamos obtener ubicación
-            locationTrigger++
+            state = state.copy(locationTrigger = state.locationTrigger + 1)
         } else {
-            // El usuario rechazó encender el GPS
-            isLoadingLocation = false
+            state = state.copy(isLoadingLocation = false)
         }
     }
 
-    var showProfileSheet by remember { mutableStateOf(false) }
-    var showCartSheet by remember { mutableStateOf(false) }
-    var profileCurrentSection by remember { mutableStateOf("MENU") }
-
-    var selectedHuariqueForCart by remember { mutableStateOf<RadarHuarique?>(null) }
-
-    var selectedDishForCart by remember { mutableStateOf<com.labajada.app.domain.model.Dish?>(null) }
-    var showMenuSheet by remember { mutableStateOf(false) }
-    var huariqueParaMenu by remember { mutableStateOf<RadarHuarique?>(null) }
-    val menuDelHuarique by searchViewModel.menuDelHuariqueSeleccionado.collectAsState()
-
-    var cantidadSeleccionada by remember { mutableIntStateOf(1) }
-
-    val huariquesRadar by searchViewModel.huariquesDesdeBaseDeDatos.collectAsState()
-    val ubicacionClienteInicial = remember { LatLng(-8.1116, -79.0287) }
-
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(ubicacionClienteInicial, 17f)
-    }
-    val ultimasBusquedas by searchViewModel.searchHistory.collectAsState(initial = emptyList())
-    val queryText by searchViewModel.searchQuery.collectAsState(initial = "")
-
-    // Disparador que gestiona permisos, exige el GPS encendido y mueve la cámara a la ubicación actual
-    LaunchedEffect(hasLocationPermission, locationTrigger) {
-        if (!hasLocationPermission) {
+    LaunchedEffect(state.hasLocationPermission, state.locationTrigger) {
+        if (!state.hasLocationPermission) {
             permissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -105,20 +88,16 @@ fun BuyerSearchScreen(
                 )
             )
         } else {
-            isLoadingLocation = true
+            state = state.copy(isLoadingLocation = true)
             val locationRequest = com.google.android.gms.location.LocationRequest.Builder(
                 com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, 5000
             ).build()
             val builder = com.google.android.gms.location.LocationSettingsRequest.Builder()
                 .addLocationRequest(locationRequest)
-
-            val client: com.google.android.gms.location.SettingsClient =
-                com.google.android.gms.location.LocationServices.getSettingsClient(context)
-
+            val client = com.google.android.gms.location.LocationServices.getSettingsClient(context)
             val task = client.checkLocationSettings(builder.build())
 
             task.addOnSuccessListener {
-                // El GPS está encendido y tenemos permisos. Procedemos a rastrear la ubicación real:
                 try {
                     searchViewModel.rastrearUbicacionActual(context)
                     val fusedLocationClient = com.google.android.gms.location.LocationServices
@@ -127,27 +106,20 @@ fun BuyerSearchScreen(
                     @android.annotation.SuppressLint("MissingPermission")
                     fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                         if (location != null) {
-                            val currentLatLng = LatLng(location.latitude, location.longitude)
                             cameraPositionState.position =
-                                CameraPosition.fromLatLngZoom(currentLatLng, 16.5f)
-                            isLoadingLocation = false
+                                CameraPosition.fromLatLngZoom(LatLng(location.latitude, location.longitude), 16.5f)
+                            state = state.copy(isLoadingLocation = false)
                         } else {
-                            // Respaldo si lastLocation devuelve null (caché vacía):
-                            // pedimos un fix nuevo en tiempo real
                             @android.annotation.SuppressLint("MissingPermission")
                             fusedLocationClient.requestLocationUpdates(
                                 locationRequest,
                                 object : com.google.android.gms.location.LocationCallback() {
-                                    override fun onLocationResult(
-                                        locationResult: com.google.android.gms.location.LocationResult
-                                    ) {
-                                        val lastLoc = locationResult.lastLocation
+                                    override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
+                                        val lastLoc = result.lastLocation
                                         if (lastLoc != null) {
-                                            val fallbackLatLng =
-                                                LatLng(lastLoc.latitude, lastLoc.longitude)
                                             cameraPositionState.position =
-                                                CameraPosition.fromLatLngZoom(fallbackLatLng, 16.5f)
-                                            isLoadingLocation = false
+                                                CameraPosition.fromLatLngZoom(LatLng(lastLoc.latitude, lastLoc.longitude), 16.5f)
+                                            state = state.copy(isLoadingLocation = false)
                                             fusedLocationClient.removeLocationUpdates(this)
                                         }
                                     }
@@ -156,34 +128,33 @@ fun BuyerSearchScreen(
                             )
                         }
                     }.addOnFailureListener {
-                        isLoadingLocation = false
+                        state = state.copy(isLoadingLocation = false)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    isLoadingLocation = false
+                    state = state.copy(isLoadingLocation = false)
                 }
             }
 
             task.addOnFailureListener { exception ->
-                // El GPS está apagado. Mostramos el cuadro de diálogo nativo de Android para activarlo
                 if (exception is com.google.android.gms.common.api.ResolvableApiException) {
                     try {
-                        val intentSenderRequest = androidx.activity.result.IntentSenderRequest
-                            .Builder(exception.resolution.intentSender)
-                            .build()
-                        gpsLauncher.launch(intentSenderRequest)
-                    } catch (sendEx: android.content.IntentSender.SendIntentException) {
-                        sendEx.printStackTrace()
-                        isLoadingLocation = false
+                        gpsLauncher.launch(
+                            androidx.activity.result.IntentSenderRequest
+                                .Builder(exception.resolution.intentSender)
+                                .build()
+                        )
+                    } catch (e: android.content.IntentSender.SendIntentException) {
+                        e.printStackTrace()
+                        state = state.copy(isLoadingLocation = false)
                     }
                 } else {
-                    isLoadingLocation = false
+                    state = state.copy(isLoadingLocation = false)
                 }
             }
         }
     }
 
-    // DISEÑO INTERFAZ DE USUARIO
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -191,9 +162,10 @@ fun BuyerSearchScreen(
                 .background(Color(0xFFFAFAFA))
                 .padding(16.dp)
         ) {
-            // Encabezado
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -202,10 +174,7 @@ fun BuyerSearchScreen(
                     Text(text = "Huariques listos al toque en tu zona", fontSize = 14.sp, color = Color(0xFF757575))
                 }
                 IconButton(
-                    onClick = {
-                        profileCurrentSection = "MENU"
-                        showProfileSheet = true
-                    },
+                    onClick = { state = state.copy(profileCurrentSection = "MENU", showProfileSheet = true) },
                     modifier = Modifier
                         .background(Color(0xFFFFEB3B), shape = RoundedCornerShape(50.dp))
                         .size(44.dp)
@@ -216,7 +185,6 @@ fun BuyerSearchScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Buscador
             OutlinedTextField(
                 value = queryText,
                 onValueChange = { searchViewModel.onSearchQueryChange(it) },
@@ -262,19 +230,15 @@ fun BuyerSearchScreen(
                         )
                     }
                 } else {
-                    items(ultimasBusquedas, key = { it.id }) { historialItem ->
+                    items(ultimasBusquedas, key = { it }) { historialItem ->
                         FilterChip(
                             selected = false,
                             onClick = {
-                                searchViewModel.onSearchQueryChange(historialItem.searchQuery)
+                                searchViewModel.onSearchQueryChange(historialItem)
                                 searchViewModel.ejecutarBusquedaInteligente()
                             },
                             label = {
-                                Text(
-                                    historialItem.searchQuery,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
+                                Text(historialItem, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = FilterChipDefaults.filterChipColors(
@@ -289,9 +253,10 @@ fun BuyerSearchScreen(
             Spacer(modifier = Modifier.height(10.dp))
             Text(text = "Huariques en tu radar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121), modifier = Modifier.padding(bottom = 10.dp))
 
-            // Contenedor Mapa Google Maps
             Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
@@ -299,10 +264,10 @@ fun BuyerSearchScreen(
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+                        properties = MapProperties(isMyLocationEnabled = state.hasLocationPermission),
                         uiSettings = MapUiSettings(
                             zoomControlsEnabled = false,
-                            myLocationButtonEnabled = hasLocationPermission,
+                            myLocationButtonEnabled = state.hasLocationPermission,
                             rotationGesturesEnabled = false,
                             tiltGesturesEnabled = false,
                             scrollGesturesEnabled = true,
@@ -318,8 +283,7 @@ fun BuyerSearchScreen(
                         }
                     }
 
-                    // Overlay de carga mientras se obtiene la ubicación actual
-                    if (isLoadingLocation) {
+                    if (state.isLoadingLocation) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -340,82 +304,87 @@ fun BuyerSearchScreen(
                                         color = Color(0xFFD32F2F)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = "Un momento, te estamos buscando...",
-                                        fontSize = 13.sp,
-                                        color = Color(0xFF212121)
-                                    )
+                                    Text(text = "Un momento, te estamos buscando...", fontSize = 13.sp, color = Color(0xFF212121))
                                 }
                             }
                         }
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(10.dp))
+
             HuariquesRadarCarousel(
                 huariquesRadar = huariquesRadar,
                 cameraPositionState = cameraPositionState,
                 searchViewModel = searchViewModel,
                 onVerMenu = { huarique ->
-                    huariqueParaMenu = huarique
+                    state = state.copy(
+                        huariqueParaMenu = huarique,
+                        showMenuSheet = true
+                    )
                     searchViewModel.abrirMenuDeHuarique(huarique.id)
-                    showMenuSheet = true
                 }
             )
         }
-        // Una sola lista de búsqueda superpuesta condicionalmente
+
         if (queryText.isNotEmpty() && platosEncontrados.isNotEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 155.dp) // Ajusta para dejar visible el buscador superior
+                    .padding(top = 155.dp)
                     .background(Color.White)
             ) {
                 SearchResultsList(
                     platosEncontrados = platosEncontrados,
                     onSelectDish = { huariquePuente, dish ->
-                        selectedHuariqueForCart = huariquePuente
-                        selectedDishForCart = dish
-                        cantidadSeleccionada = 1
-                        showCartSheet = true
+                        state = state.copy(
+                            selectedHuariqueForCart = huariquePuente,
+                            selectedDishForCart = dish,
+                            cantidadSeleccionada = 1,
+                            showCartSheet = true
+                        )
                     }
                 )
             }
         }
     }
-    // sheet de menú
-    if (showMenuSheet && huariqueParaMenu != null) {
+
+    if (state.showMenuSheet && state.huariqueParaMenu != null) {
         RestaurantMenuSheet(
-            huarique = huariqueParaMenu!!,
+            huarique = state.huariqueParaMenu!!,
             menu = menuDelHuarique,
             onDismiss = {
-                showMenuSheet = false
+                state = state.copy(showMenuSheet = false, huariqueParaMenu = null)
                 searchViewModel.cerrarMenuDeHuarique()
             },
             onDishSelected = { dish ->
-                selectedHuariqueForCart = huariqueParaMenu
-                selectedDishForCart = dish
-                cantidadSeleccionada = 1
-                showMenuSheet = false
+                state = state.copy(
+                    selectedHuariqueForCart = state.huariqueParaMenu,
+                    selectedDishForCart = dish,
+                    cantidadSeleccionada = 1,
+                    showMenuSheet = false,
+                    huariqueParaMenu = null
+                )
                 searchViewModel.cerrarMenuDeHuarique()
-                showCartSheet = true
+                state = state.copy(showCartSheet = true)
             }
         )
     }
+
     BuyerSearchSheets(
-        showCartSheet = showCartSheet,
-        onDismissCart = { showCartSheet = false },
-        selectedHuariqueForCart = selectedHuariqueForCart,
-        selectedDish = selectedDishForCart,
-        cantidadSeleccionada = cantidadSeleccionada,
-        onCantidadChange = { cantidadSeleccionada = it },
+        showCartSheet = state.showCartSheet,
+        onDismissCart = { state = state.copy(showCartSheet = false) },
+        selectedHuariqueForCart = state.selectedHuariqueForCart,
+        selectedDish = state.selectedDishForCart,
+        cantidadSeleccionada = state.cantidadSeleccionada,
+        onCantidadChange = { state = state.copy(cantidadSeleccionada = it) },
         orderViewModel = orderViewModel,
-        showProfileSheet = showProfileSheet,
-        onDismissProfile = { showProfileSheet = false },
-        profileCurrentSection = profileCurrentSection,
-        onSectionChange = { profileCurrentSection = it },
+        showProfileSheet = state.showProfileSheet,
+        onDismissProfile = { state = state.copy(showProfileSheet = false) },
+        profileCurrentSection = state.profileCurrentSection,
+        onSectionChange = { state = state.copy(profileCurrentSection = it) },
         searchViewModel = searchViewModel,
         onLogout = onLogout
     )
-
 }

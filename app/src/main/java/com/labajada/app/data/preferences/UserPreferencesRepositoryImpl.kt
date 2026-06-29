@@ -1,4 +1,4 @@
-package com.labajada.app.data.local.preferences
+package com.labajada.app.data.preferences
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
