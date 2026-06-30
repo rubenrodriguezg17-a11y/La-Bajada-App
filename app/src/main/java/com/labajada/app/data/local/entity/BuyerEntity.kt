@@ -5,11 +5,10 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "buyers")
 data class BuyerEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val email: String,
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
     val name: String,
     val phone: String,
-    val departamento: String,
-    val provincia: String,
+    val email: String,
     val password: String
 )

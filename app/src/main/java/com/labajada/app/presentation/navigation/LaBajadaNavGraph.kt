@@ -26,6 +26,7 @@ import com.labajada.app.domain.usecase.auth.GetActiveBuyerUseCase
 import com.labajada.app.domain.usecase.auth.LoginUseCase
 import com.labajada.app.domain.usecase.auth.RegisterBuyerUseCase
 import com.labajada.app.domain.usecase.auth.RegisterRestaurantUseCase
+import com.labajada.app.domain.usecase.auth.SendPasswordResetEmailUseCase
 import com.labajada.app.domain.usecase.search.ClearSearchHistoryUseCase
 import com.labajada.app.domain.usecase.search.GetAllDishesUseCase
 import com.labajada.app.domain.usecase.search.GetRecentSearchHistoryUseCase
@@ -36,6 +37,8 @@ import com.labajada.app.presentation.buyer.register.BuyerRegisterScreen
 import com.labajada.app.presentation.buyer.register.BuyerRegisterViewModel
 import com.labajada.app.presentation.buyer.search.BuyerSearchScreen
 import com.labajada.app.presentation.buyer.search.BuyerSearchViewModel
+import com.labajada.app.presentation.login.ForgotPasswordScreen
+import com.labajada.app.presentation.login.ForgotPasswordViewModel
 import com.labajada.app.presentation.login.LoginScreen
 import com.labajada.app.presentation.login.LoginViewModel
 import com.labajada.app.presentation.onboarding.OnboardingScreen
@@ -74,6 +77,7 @@ fun LaBajadaNavGraph() {
     val orderRepository = remember { OrderRepositoryImpl(db.orderDao()) }
 
     // UseCases auth
+    val sendPasswordResetEmailUseCase = remember { SendPasswordResetEmailUseCase(authRepository) }
     val loginUseCase = remember { LoginUseCase(authRepository) }
     val registerBuyerUseCase = remember { RegisterBuyerUseCase(authRepository) }
     val registerRestaurantUseCase = remember { RegisterRestaurantUseCase(authRepository) }
@@ -91,6 +95,10 @@ fun LaBajadaNavGraph() {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return when (modelClass.name) {
+
+                    ForgotPasswordViewModel::class.java.name ->
+                        ForgotPasswordViewModel(sendPasswordResetEmailUseCase) as T
+
                     LoginViewModel::class.java.name ->
                         LoginViewModel(loginUseCase) as T
 
@@ -170,6 +178,9 @@ fun LaBajadaNavGraph() {
                         },
                         onNavigateToOnboarding = {
                             navController.navigate(Screen.Onboarding.route)
+                        },
+                        onNavigateToForgotPassword = {
+                            navController.navigate(Screen.ForgotPassword.route)
                         }
                     )
                 }
@@ -193,6 +204,14 @@ fun LaBajadaNavGraph() {
                                 }
                             }
                         }
+                    )
+                }
+
+                composable(route = Screen.ForgotPassword.route) {
+                    val forgotPasswordVm: ForgotPasswordViewModel = viewModel(factory = viewModelFactory)
+                    ForgotPasswordScreen (
+                        viewModel = forgotPasswordVm,
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

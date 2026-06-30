@@ -12,4 +12,5 @@ interface AuthRepository {
     suspend fun logout()
     suspend fun registerBuyer(buyer: Buyer): Long
     suspend fun registerRestaurant(restaurant: Restaurant): Long
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit>
 }

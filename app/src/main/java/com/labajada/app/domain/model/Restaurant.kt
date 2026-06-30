@@ -3,6 +3,7 @@ package com.labajada.app.domain.model
 data class Restaurant(
     val id: Int = 0,
     val email: String,
+    val password: String,
     val restaurantName: String,
     val rucNumber: String,
     val phoneNumber: String,
@@ -10,5 +11,7 @@ data class Restaurant(
     val addressDetails: String,
     val latitude: Double,
     val longitude: Double,
-    val password: String
+    val offersDelivery: Boolean,
+    val maxDeliveryDistanceKm: Double,
+    val imageUrl: String? = null
 )

@@ -66,8 +66,6 @@ class AuthRepositoryImpl(
                 id = firebaseUid.hashCode(),
                 name = buyer.name,
                 phone = buyer.phone,
-                departamento = buyer.departamento,
-                provincia = buyer.provincia,
                 email = buyer.email,
                 password = ""
             )
@@ -85,6 +83,8 @@ class AuthRepositoryImpl(
 
             val entity = RestaurantEntity(
                 id = firebaseUid.hashCode(),
+                email = restaurant.email,
+                password = "",
                 restaurantName = restaurant.restaurantName,
                 rucNumber = restaurant.rucNumber,
                 phoneNumber = restaurant.phoneNumber,
@@ -92,14 +92,25 @@ class AuthRepositoryImpl(
                 addressDetails = restaurant.addressDetails,
                 latitude = restaurant.latitude,
                 longitude = restaurant.longitude,
-                email = restaurant.email,
-                password = ""
+                offersDelivery = restaurant.offersDelivery,           // ← nuevo
+                maxDeliveryDistanceKm = restaurant.maxDeliveryDistanceKm, // ← nuevo
+                imageUrl = restaurant.imageUrl                        // ← nuevo
             )
             restaurantDao.insertRestaurant(entity)
             firebaseUid.hashCode().toLong()
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
+        }
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+        return try {
+            firebaseAuth.sendPasswordResetEmail(email).await()
+            Result.success(Unit)
+        }catch (e: Exception){
+            e.printStackTrace()
+            Result.failure(e)
         }
     }
 

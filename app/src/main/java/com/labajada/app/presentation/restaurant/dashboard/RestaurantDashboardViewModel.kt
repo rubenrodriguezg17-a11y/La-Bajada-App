@@ -79,17 +79,18 @@ class RestaurantDashboardViewModel(
         viewModelScope.launch {
             activeSession.collect { restaurant ->
                 restaurant?.let { res ->
-                    _uiState.update {
-                        it.copy(
-                            resNameByOwner = res.restaurantName,
-                            resRucByOwner = res.rucNumber,
-                            resPhoneByOwner = res.phoneNumber,
-                            resCategoryByOwner = res.selectedCategory,
-                            resAddressByOwner = res.addressDetails,
-                            resLatitude = res.latitude,
-                            resLongitude = res.longitude
-                        )
-                    }
+                    _uiState.update { it.copy(
+                        resNameByOwner = res.restaurantName,
+                        resRucByOwner = res.rucNumber,
+                        resPhoneByOwner = res.phoneNumber,
+                        resCategoryByOwner = res.selectedCategory,
+                        resAddressByOwner = res.addressDetails,
+                        resLatitude = res.latitude,
+                        resLongitude = res.longitude,
+                        resOffersDelivery = res.offersDelivery,
+                        resMaxDeliveryDistanceKm = res.maxDeliveryDistanceKm,
+                        resImageUrl = res.imageUrl
+                    )}
                 }
             }
         }
@@ -130,9 +131,12 @@ class RestaurantDashboardViewModel(
                 latitude = state.resLatitude,
                 longitude = state.resLongitude,
                 email = sesionActual?.email ?: "",
-                password = ""
+                password = "",
+                offersDelivery = state.resOffersDelivery,
+                maxDeliveryDistanceKm = state.resMaxDeliveryDistanceKm,
+                imageUrl = state.resImageUrl
             )
-            restaurantRepository.updateRestaurantProfile(restauranteActualizado)  // ← corregido
+            restaurantRepository.updateRestaurantProfile(restauranteActualizado)
             _uiState.update { it.copy(isEditingProfile = false) }
         }
     }

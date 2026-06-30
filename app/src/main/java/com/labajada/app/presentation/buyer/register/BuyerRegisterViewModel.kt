@@ -21,8 +21,6 @@ class BuyerRegisterViewModel(
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value, error = null) }
     fun onPhoneChange(value: String) = _uiState.update { it.copy(phone = value, error = null) }
-    fun onDepartamentoChange(value: String) = _uiState.update { it.copy(departamento = value, error = null) }
-    fun onProvinciaChange(value: String) = _uiState.update { it.copy(provincia = value, error = null) }
     fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, error = null) }
     fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, error = null) }
 
@@ -55,11 +53,9 @@ class BuyerRegisterViewModel(
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
                 val newBuyer = Buyer(
-                    email = state.email.trim(),
                     name = state.name.trim(),
                     phone = state.phone.trim(),
-                    departamento = state.departamento.trim(),
-                    provincia = state.provincia.trim(),
+                    email = state.email.trim(),
                     password = state.password
                 )
 

@@ -29,7 +29,7 @@ import com.labajada.app.data.local.entity.SessionEntity // ◄ IMPORTACIÓN AGRE
         RestaurantEntity::class,
         SessionEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

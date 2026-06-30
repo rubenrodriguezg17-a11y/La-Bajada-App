@@ -19,52 +19,92 @@ class RestaurantRegisterViewModel(
     private val _uiState = MutableStateFlow(RestaurantRegisterState())
     val uiState: StateFlow<RestaurantRegisterState> = _uiState.asStateFlow()
 
+    // --- Navegación del wizard ---
+    fun nextStep() {
+        val state = _uiState.value
+        val canAdvance = when (state.currentStep) {
+            1 -> validateStep1()
+            2 -> validateStep2()
+            else -> true
+        }
+        if (canAdvance) {
+            _uiState.update { it.copy(currentStep = it.currentStep + 1, error = null) }
+        }
+    }
+
+    fun previousStep() {
+        _uiState.update {
+            if (it.currentStep > 1) it.copy(currentStep = it.currentStep - 1, error = null) else it
+        }
+    }
+
+    private fun validateStep1(): Boolean {
+        val state = _uiState.value
+        if (state.email.isBlank() || state.password.isBlank() || state.confirmPassword.isBlank()) {
+            _uiState.update { it.copy(error = "Completa todos los campos.") }
+            return false
+        }
+        if (!PasswordValidator.isValidEmail(state.email)) {
+            _uiState.update { it.copy(error = "Ingresa un correo electrónico válido.") }
+            return false
+        }
+        val passwordCheck = PasswordValidator.validate(state.password)
+        if (!passwordCheck.isValid) {
+            _uiState.update { it.copy(error = "La contraseña no cumple con los requisitos de seguridad.") }
+            return false
+        }
+        if (state.password != state.confirmPassword) {
+            _uiState.update { it.copy(error = "Las contraseñas no coinciden.") }
+            return false
+        }
+        return true
+    }
+
+    private fun validateStep2(): Boolean {
+        val state = _uiState.value
+        if (state.restaurantName.isBlank() || state.rucNumber.isBlank() ||
+            state.phoneNumber.isBlank() || state.selectedCategory.isBlank()) {
+            _uiState.update { it.copy(error = "Completa todos los campos.") }
+            return false
+        }
+        if (!PeruValidators.isValidDocumento(state.rucNumber)) {
+            _uiState.update { it.copy(error = "Documento inválido. Debe ser DNI (8 dígitos) o RUC (11 dígitos).") }
+            return false
+        }
+        if (!PeruValidators.isValidPhone(state.phoneNumber)) {
+            _uiState.update { it.copy(error = "Ingresa un celular válido (9 dígitos, empieza con 9).") }
+            return false
+        }
+        return true
+    }
+
+    // --- Paso 1 ---
+    fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, error = null) }
+    fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, error = null) }
+    fun onConfirmPasswordChange(value: String) = _uiState.update { it.copy(confirmPassword = value, error = null) }
+
+    // --- Paso 2 ---
     fun onNameChange(value: String) = _uiState.update { it.copy(restaurantName = value, error = null) }
     fun onRucChange(value: String) = _uiState.update { it.copy(rucNumber = value, error = null) }
     fun onPhoneChange(value: String) = _uiState.update { it.copy(phoneNumber = value, error = null) }
-    fun onCategorySelected(category: String) = _uiState.update {
-        it.copy(selectedCategory = category, expandedCategory = false)
-    }
-    fun toggleCategoryDropdown() = _uiState.update {
-        it.copy(expandedCategory = !it.expandedCategory)
-    }
+    fun onCategorySelected(category: String) = _uiState.update { it.copy(selectedCategory = category, expandedCategory = false) }
+    fun toggleCategoryDropdown() = _uiState.update { it.copy(expandedCategory = !it.expandedCategory) }
+
+    // --- Paso 3 ---
     fun onAddressChange(value: String) = _uiState.update { it.copy(addressDetails = value, error = null) }
-    fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, error = null) }
-    fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, error = null) }
     fun toggleMapDialog(show: Boolean) = _uiState.update { it.copy(showMapDialog = show) }
     fun onLocationConfirmed(lat: Double, lng: Double) = _uiState.update {
         it.copy(latitude = lat, longitude = lng, isLocationSelected = true, showMapDialog = false)
     }
+    fun onOffersDeliveryChange(value: Boolean) = _uiState.update { it.copy(offersDelivery = value) }
+    fun onMaxDeliveryDistanceChange(value: Double) = _uiState.update { it.copy(maxDeliveryDistanceKm = value) }
+    fun onImageSelected(url: String?) = _uiState.update { it.copy(imageUrl = url) }
 
     fun registerRestaurant(onComplete: () -> Unit) {
         val state = _uiState.value
 
-        if (state.restaurantName.isBlank() || state.rucNumber.isBlank() ||
-            state.phoneNumber.isBlank() || state.selectedCategory.isBlank() ||
-            state.addressDetails.isBlank() || state.email.isBlank() ||
-            state.password.isBlank() || !state.isLocationSelected) {
-            _uiState.update { it.copy(error = "Completa todos los campos y selecciona ubicación.") }
-            return
-        }
-
-        if (!PeruValidators.isValidDocumento(state.rucNumber)) {
-            _uiState.value = _uiState.value.copy(error = "Documento inválido. Debe ser DNI (8 dígitos) o RUC (11 dígitos).")
-            return
-        }
-
-        if (!PeruValidators.isValidPhone(state.phoneNumber)) {
-            _uiState.update { it.copy(error = "Ingresa un celular válido (9 dígitos, empieza con 9).") }
-            return
-        }
-
-        if (!PasswordValidator.isValidEmail(state.email)) {
-            _uiState.update { it.copy(error = "Ingresa un correo electrónico válido.") }
-            return
-        }
-
-        val passwordCheck = PasswordValidator.validate(state.password)
-        if (!passwordCheck.isValid) {
-            _uiState.update { it.copy(error = "La contraseña no cumple con los requisitos de seguridad.") }
+        if (state.addressDetails.isBlank() || !state.isLocationSelected) {
+            _uiState.update { it.copy(error = "Completa la dirección y selecciona ubicación en el mapa.") }
             return
         }
 
@@ -74,6 +114,7 @@ class RestaurantRegisterViewModel(
 
                 val newRestaurant = Restaurant(
                     email = state.email.trim(),
+                    password = state.password,
                     restaurantName = state.restaurantName.trim(),
                     rucNumber = state.rucNumber.trim(),
                     phoneNumber = state.phoneNumber.trim(),
@@ -81,7 +122,9 @@ class RestaurantRegisterViewModel(
                     addressDetails = state.addressDetails.trim(),
                     latitude = state.latitude,
                     longitude = state.longitude,
-                    password = state.password
+                    offersDelivery = state.offersDelivery,
+                    maxDeliveryDistanceKm = if (state.offersDelivery) state.maxDeliveryDistanceKm else 0.0,
+                    imageUrl = state.imageUrl
                 )
 
                 val result = registerRestaurantUseCase.execute(newRestaurant)
@@ -93,9 +136,7 @@ class RestaurantRegisterViewModel(
                     _uiState.update { it.copy(error = "Fallo en la persistencia: ${exception.localizedMessage}") }
                 }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(isLoading = false, error = "Error inesperado: ${e.localizedMessage}")
-                }
+                _uiState.update { it.copy(isLoading = false, error = "Error inesperado: ${e.localizedMessage}") }
             }
         }
     }

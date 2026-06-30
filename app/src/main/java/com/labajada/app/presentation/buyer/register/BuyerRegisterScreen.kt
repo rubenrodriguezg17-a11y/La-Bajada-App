@@ -105,26 +105,6 @@ fun BuyerRegisterScreen(
             }
 
             OutlinedTextField(
-                value = uiState.departamento,
-                onValueChange = { viewModel.onDepartamentoChange(it) },
-                label = { Text("Departamento (Ej: La Libertad)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
-            )
-
-            OutlinedTextField(
-                value = uiState.provincia,
-                onValueChange = { viewModel.onProvinciaChange(it) },
-                label = { Text("Provincia (Ej: Trujillo)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
-            )
-
-            OutlinedTextField(
                 value = uiState.email,
                 onValueChange = { viewModel.onEmailChange(it) },
                 label = { Text("Correo Electrónico (Gmail)") },
@@ -166,8 +146,6 @@ fun BuyerRegisterScreen(
                 ) {
                     PasswordRuleRow("Mínimo 8 caracteres", passwordCheck.hasMinLength)
                     PasswordRuleRow("Una letra mayúscula", passwordCheck.hasUppercase)
-                    PasswordRuleRow("Un número", passwordCheck.hasNumber)
-                    PasswordRuleRow("Un carácter especial (!@#\$...)", passwordCheck.hasSpecialChar)
                 }
             }
 
@@ -187,7 +165,6 @@ fun BuyerRegisterScreen(
             onClick = { viewModel.registerBuyer(onRegistrationComplete) },
             enabled = uiState.name.isNotBlank() &&
                     isPhoneValid && uiState.phone.isNotBlank() &&
-                    uiState.departamento.isNotBlank() && uiState.provincia.isNotBlank() &&
                     isEmailValid && uiState.email.isNotBlank() &&
                     passwordCheck.isValid && !uiState.isLoading,
             modifier = Modifier

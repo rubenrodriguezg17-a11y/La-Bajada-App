@@ -41,7 +41,6 @@ fun BuyerMapScreen(
 ) {
 
     val scope = rememberCoroutineScope()
-    // 1. Datos simulados de prueba (Geolocalizados en el mapa)
     val huariquesDePrueba = remember {
         listOf(
             HuariqueSimulado("1", "El Cevichazo Fino", "🐟 Cevichería", "⭐️ 4.8", -8.1116, -79.0287, ""),

@@ -26,5 +26,10 @@ data class RestaurantDashboardState(
     val resLatitude: Double = -8.1116,
     val resLongitude: Double = -79.0287,
     val showProfileMapDialog: Boolean = false,
-    val expandedProfileCategory: Boolean = false
+    val expandedProfileCategory: Boolean = false,
+
+    // Delivery e imagen
+    val resOffersDelivery: Boolean = false,
+    val resMaxDeliveryDistanceKm: Double = 3.0,
+    val resImageUrl: String? = null
 )

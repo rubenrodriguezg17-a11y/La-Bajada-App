@@ -2,25 +2,20 @@ package com.labajada.app.core.validation
 
 data class PasswordValidationResult(
     val hasMinLength: Boolean,
-    val hasUppercase: Boolean,
-    val hasNumber: Boolean,
-    val hasSpecialChar: Boolean
+    val hasUppercase: Boolean
 ) {
     val isValid: Boolean
-        get() = hasMinLength && hasUppercase && hasNumber && hasSpecialChar
+        get() = hasMinLength && hasUppercase
 }
 
 object PasswordValidator {
 
     private const val MIN_LENGTH = 8
-    private val SPECIAL_CHAR_REGEX = Regex("[^A-Za-z0-9]")
 
     fun validate(password: String): PasswordValidationResult {
         return PasswordValidationResult(
             hasMinLength = password.length >= MIN_LENGTH,
-            hasUppercase = password.any { it.isUpperCase() },
-            hasNumber = password.any { it.isDigit() },
-            hasSpecialChar = SPECIAL_CHAR_REGEX.containsMatchIn(password)
+            hasUppercase = password.any { it.isUpperCase() }
         )
     }
 

@@ -30,7 +30,8 @@ import androidx.compose.ui.unit.sp
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: (String) -> Unit,
-    onNavigateToOnboarding: () -> Unit
+    onNavigateToOnboarding: () -> Unit,
+    onNavigateToForgotPassword:() -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
@@ -141,19 +142,16 @@ fun LoginScreen(
                 )
             )
 
-            // ◄ COMENTADO TEMPORALMENTE: "¿Olvidaste tu contraseña?" — descomentar cuando esté lista la función
-            /*
             Text(
                 text = "¿Olvidaste tu contraseña?",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF757575),
+                color = Color(0xFFD32F2F),
                 textAlign = TextAlign.End,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = !uiState.isLoading) { /* TODO */ }
+                    .clickable(enabled = !uiState.isLoading) { onNavigateToForgotPassword() }
             )
-            */
 
             if (uiState.errorMessage != null) {
                 Card(
