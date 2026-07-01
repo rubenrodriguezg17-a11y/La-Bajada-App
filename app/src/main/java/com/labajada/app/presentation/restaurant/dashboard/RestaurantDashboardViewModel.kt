@@ -89,7 +89,9 @@ class RestaurantDashboardViewModel(
                         resLongitude = res.longitude,
                         resOffersDelivery = res.offersDelivery,
                         resMaxDeliveryDistanceKm = res.maxDeliveryDistanceKm,
-                        resImageUrl = res.imageUrl
+                        resImageUrl = res.imageUrl,
+                        resIsOpen = res.isOpen,
+                        resBusinessHours = res.businessHours ?: ""
                     )}
                 }
             }
@@ -116,6 +118,10 @@ class RestaurantDashboardViewModel(
     fun onProfileLocationConfirmed(lat: Double, lng: Double) = _uiState.update {
         it.copy(resLatitude = lat, resLongitude = lng, showProfileMapDialog = false)
     }
+    fun onProfileBusinessHoursChange(v: String) = _uiState.update { it.copy(resBusinessHours = v) }
+    fun toggleGananciasVisibility() {
+        _uiState.update { it.copy(isGananciasVisible = !it.isGananciasVisible) }
+    }
 
     fun guardarDatosDelLocal() {
         val state = _uiState.value
@@ -134,7 +140,9 @@ class RestaurantDashboardViewModel(
                 password = "",
                 offersDelivery = state.resOffersDelivery,
                 maxDeliveryDistanceKm = state.resMaxDeliveryDistanceKm,
-                imageUrl = state.resImageUrl
+                imageUrl = state.resImageUrl,
+                isOpen = state.resIsOpen,
+                businessHours = state.resBusinessHours.ifBlank { null }
             )
             restaurantRepository.updateRestaurantProfile(restauranteActualizado)
             _uiState.update { it.copy(isEditingProfile = false) }
@@ -213,6 +221,33 @@ class RestaurantDashboardViewModel(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    fun toggleIsOpen() {
+        val newValue = !_uiState.value.resIsOpen
+        _uiState.update { it.copy(resIsOpen = newValue) }
+        viewModelScope.launch {
+            val sesionActual = authRepository.getActiveSession()
+            val state = _uiState.value
+            val restauranteActualizado = Restaurant(
+                id = currentRestaurantId.toIntOrNull() ?: 0,
+                restaurantName = state.resNameByOwner,
+                rucNumber = state.resRucByOwner,
+                phoneNumber = state.resPhoneByOwner,
+                selectedCategory = state.resCategoryByOwner,
+                addressDetails = state.resAddressByOwner,
+                latitude = state.resLatitude,
+                longitude = state.resLongitude,
+                email = sesionActual?.email ?: "",
+                password = "",
+                offersDelivery = state.resOffersDelivery,
+                maxDeliveryDistanceKm = state.resMaxDeliveryDistanceKm,
+                imageUrl = state.resImageUrl,
+                isOpen = newValue,
+                businessHours = state.resBusinessHours.ifBlank { null }
+            )
+            restaurantRepository.updateRestaurantProfile(restauranteActualizado)
         }
     }
 }

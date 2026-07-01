@@ -255,7 +255,7 @@ fun DeliveryRadiusMapDialog(
     }
 }
 
-private fun formatearDistancia(metros: Float): String {
+fun formatearDistancia(metros: Float): String {
     return if (metros < 1000f) {
         "${metros.toInt()} m"
     } else {

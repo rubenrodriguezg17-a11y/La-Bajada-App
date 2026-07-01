@@ -1,14 +1,13 @@
-package com.labajada.app.presentation.restaurant.dashboard.components
+package com.labajada.app.presentation.restaurant.dashboard.components.menu
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,7 +20,13 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 @Composable
-fun DishRowItem(name: String, price: String, imageUrl: String = "") {
+fun DishRowItem(
+    name: String,
+    price: String,
+    imageUrl: String = "",
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -31,21 +36,19 @@ fun DishRowItem(name: String, price: String, imageUrl: String = "") {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp), // Bajamos un toque el padding para balancear con la foto
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // COMPONENTE FOTO INTELIGENTE:
             if (imageUrl.isNotBlank()) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = "Foto de $name",
-                    contentScale = ContentScale.Crop, // Recorta la imagen para que llene el cuadrado sin deformarse
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(56.dp)
-                        .clip(RoundedCornerShape(8.dp)) // Bordes redondeados estéticos para el platillo
+                        .clip(RoundedCornerShape(8.dp))
                 )
             } else {
-                // Si el platillo no tiene foto, muestra un ícono de comida por defecto para que no se vea vacío
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -57,21 +60,32 @@ fun DishRowItem(name: String, price: String, imageUrl: String = "") {
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            // Textos Informativos
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
+                Text(text = name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
                 Text(text = "Disponible al toque", fontSize = 12.sp, color = Color(0xFF4CAF50))
+                Text(text = price, fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF263238))
             }
 
-            // Precio
-            Text(
-                text = price,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF263238)
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = Color(0xFF1976D2),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = Color(0xFFD32F2F),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
 }

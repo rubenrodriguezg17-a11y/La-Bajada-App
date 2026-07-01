@@ -92,9 +92,11 @@ class AuthRepositoryImpl(
                 addressDetails = restaurant.addressDetails,
                 latitude = restaurant.latitude,
                 longitude = restaurant.longitude,
-                offersDelivery = restaurant.offersDelivery,           // ← nuevo
-                maxDeliveryDistanceKm = restaurant.maxDeliveryDistanceKm, // ← nuevo
-                imageUrl = restaurant.imageUrl                        // ← nuevo
+                offersDelivery = restaurant.offersDelivery,
+                maxDeliveryDistanceKm = restaurant.maxDeliveryDistanceKm,
+                imageUrl = restaurant.imageUrl,
+                isOpen = false,
+                businessHours = restaurant.businessHours
             )
             restaurantDao.insertRestaurant(entity)
             firebaseUid.hashCode().toLong()

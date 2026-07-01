@@ -1,4 +1,4 @@
-package com.labajada.app.presentation.login
+package com.labajada.app.presentation.login.forgot
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.labajada.app.presentation.login.forgot.ForgotPasswordViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,6 +121,7 @@ fun ForgotPasswordScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
+                    //Por ahora sin comprar dominio, dejaremos asi los correos si llegan pero como spam , para produccion comprar dominio
                     text = "Te enviamos un enlace a ${state.email} para que crees una nueva contraseña.",
                     fontSize = 14.sp,
                     color = Color(0xFF757575),

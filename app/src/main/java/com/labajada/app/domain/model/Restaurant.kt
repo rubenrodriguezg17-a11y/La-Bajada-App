@@ -13,5 +13,7 @@ data class Restaurant(
     val longitude: Double,
     val offersDelivery: Boolean,
     val maxDeliveryDistanceKm: Double,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val isOpen: Boolean = false,
+    val businessHours: String? = null
 )

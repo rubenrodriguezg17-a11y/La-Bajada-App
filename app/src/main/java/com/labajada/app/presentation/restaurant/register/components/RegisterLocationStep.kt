@@ -20,9 +20,11 @@ fun RegisterLocationStep(
     offersDelivery: Boolean,
     maxDeliveryDistanceKm: Double,
     imageUrl: String?,
+    businessHours: String?,
     onAddressChange: (String) -> Unit,
     onOpenMapDialog: () -> Unit,
-    onImageSelected: (String?) -> Unit
+    onImageSelected: (String?) -> Unit,
+    onBusinessHoursChange: (String)-> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -54,8 +56,7 @@ fun RegisterLocationStep(
             OutlinedTextField(
                 value = when {
                     !isLocationSelected -> "Seleccionar Ubicación en Mapa"
-                    offersDelivery -> "Ubicación confirmada • Delivery hasta ${maxDeliveryDistanceKm.toInt()} km ✓"
-                    else -> "Ubicación confirmada • Solo recojo en local ✓"
+                    offersDelivery -> "Ubicación confirmada  • Delivery hasta ${formatearDistancia((maxDeliveryDistanceKm * 1000).toFloat())} "                   else -> "Ubicación confirmada • Solo recojo en local ✓"
                 },
                 onValueChange = {},
                 readOnly = true,
@@ -77,6 +78,24 @@ fun RegisterLocationStep(
         RestaurantImagePicker(
             imageUrl = imageUrl,
             onImageSelected = onImageSelected
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = businessHours ?:"",
+            onValueChange = onBusinessHoursChange,
+            label = {Text("Horario sugerido (opcional)")},
+            placeholder = {Text("Ej: Lun-Sab 6pm a 11pm")},
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Text(
+            text = "Este horario es solo referencial para tus clientes. Puedes cambiar tu estado a 'Abierto/Cerrado' desde tu panel en cualquier momento.",
+            fontSize = 11.sp,
+            color = Color(0xFF9E9E9E),
+            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
         )
     }
 }

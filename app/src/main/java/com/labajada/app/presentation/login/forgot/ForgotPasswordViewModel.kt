@@ -1,4 +1,4 @@
-package com.labajada.app.presentation.login
+package com.labajada.app.presentation.login.forgot
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

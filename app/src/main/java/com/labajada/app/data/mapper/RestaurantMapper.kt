@@ -16,7 +16,9 @@ fun Restaurant.toEntity() = RestaurantEntity(
     longitude = longitude,
     offersDelivery = offersDelivery,
     maxDeliveryDistanceKm = maxDeliveryDistanceKm,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    isOpen = isOpen,
+    businessHours = businessHours
 )
 
 fun RestaurantEntity.toDomain() = Restaurant(
@@ -32,5 +34,7 @@ fun RestaurantEntity.toDomain() = Restaurant(
     longitude = longitude,
     offersDelivery = offersDelivery,
     maxDeliveryDistanceKm = maxDeliveryDistanceKm,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    isOpen = isOpen,
+    businessHours = businessHours
 )

@@ -3,12 +3,14 @@ package com.labajada.app.presentation.restaurant.dashboard
 import android.net.Uri
 
 data class RestaurantDashboardState(
-    // Estados de Control de Navegación y Modales de UI
+    // Navegación BottomNav
     val selectedTab: Int = 0,
+
+    // Modales
     val showDeleteDialog: Boolean = false,
     val showFormSheet: Boolean = false,
 
-    // Estados del Formulario de Platillos
+    // Formulario de Platillos
     val dishName: String = "",
     val dishPrice: String = "",
     val selectedImageUri: Uri? = null,
@@ -16,20 +18,23 @@ data class RestaurantDashboardState(
     val itemIndexToAction: Int? = null,
     val itemIdToEdit: String = "",
 
-    // Estados de la Ficha del Local (Perfil)
+    // Perfil del Local
     val isEditingProfile: Boolean = false,
-    val resNameByOwner: String = "Mi Cocina Principal",
-    val resRucByOwner: String = "20123456789",
-    val resPhoneByOwner: String = "945612378",
-    val resAddressByOwner: String = "Av. Larco 123, Trujillo",
-    val resCategoryByOwner: String = "Criollo",
+    val resNameByOwner: String = "",
+    val resRucByOwner: String = "",
+    val resPhoneByOwner: String = "",
+    val resAddressByOwner: String = "",
+    val resCategoryByOwner: String = "",
     val resLatitude: Double = -8.1116,
     val resLongitude: Double = -79.0287,
     val showProfileMapDialog: Boolean = false,
     val expandedProfileCategory: Boolean = false,
-
-    // Delivery e imagen
     val resOffersDelivery: Boolean = false,
     val resMaxDeliveryDistanceKm: Double = 3.0,
-    val resImageUrl: String? = null
+    val resImageUrl: String? = null,
+    val resIsOpen: Boolean = false,
+    val resBusinessHours: String = "",
+
+    // Privacidad financiera — arranca oculto como Yape
+    val isGananciasVisible: Boolean = false
 )

@@ -8,39 +8,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.labajada.app.data.local.AppDatabase
-import com.labajada.app.data.repository.AuthRepositoryImpl
-import com.labajada.app.data.repository.BuyerRepositoryImpl
-import com.labajada.app.data.repository.DishRepositoryImpl
-import com.labajada.app.data.repository.OrderRepositoryImpl
-import com.labajada.app.data.repository.RestaurantRepositoryImpl
-import com.labajada.app.data.repository.SearchRepositoryImpl
-import com.labajada.app.domain.repository.AuthRepository
-import com.labajada.app.domain.usecase.auth.GetActiveBuyerUseCase
-import com.labajada.app.domain.usecase.auth.LoginUseCase
-import com.labajada.app.domain.usecase.auth.RegisterBuyerUseCase
-import com.labajada.app.domain.usecase.auth.RegisterRestaurantUseCase
-import com.labajada.app.domain.usecase.auth.SendPasswordResetEmailUseCase
-import com.labajada.app.domain.usecase.search.ClearSearchHistoryUseCase
-import com.labajada.app.domain.usecase.search.GetAllDishesUseCase
-import com.labajada.app.domain.usecase.search.GetRecentSearchHistoryUseCase
-import com.labajada.app.domain.usecase.search.ManageFavoriteRestaurantUseCase
-import com.labajada.app.domain.usecase.search.SaveSearchQueryUseCase
 import com.labajada.app.presentation.buyer.map.BuyerMapScreen
 import com.labajada.app.presentation.buyer.register.BuyerRegisterScreen
 import com.labajada.app.presentation.buyer.register.BuyerRegisterViewModel
 import com.labajada.app.presentation.buyer.search.BuyerSearchScreen
 import com.labajada.app.presentation.buyer.search.BuyerSearchViewModel
-import com.labajada.app.presentation.login.ForgotPasswordScreen
-import com.labajada.app.presentation.login.ForgotPasswordViewModel
 import com.labajada.app.presentation.login.LoginScreen
 import com.labajada.app.presentation.login.LoginViewModel
+import com.labajada.app.presentation.login.forgot.ForgotPasswordScreen
+import com.labajada.app.presentation.login.forgot.ForgotPasswordViewModel
 import com.labajada.app.presentation.onboarding.OnboardingScreen
 import com.labajada.app.presentation.order.OrderViewModel
 import com.labajada.app.presentation.restaurant.dashboard.RestaurantDashboardScreen
@@ -48,7 +28,7 @@ import com.labajada.app.presentation.restaurant.dashboard.RestaurantDashboardVie
 import com.labajada.app.presentation.restaurant.register.RestaurantRegisterScreen
 import com.labajada.app.presentation.restaurant.register.RestaurantRegisterViewModel
 import kotlinx.coroutines.launch
-
+// Interface donde están las rutas
 sealed interface NavUiState {
     object Loading : NavUiState
     data class Success(val role: String) : NavUiState
@@ -56,93 +36,18 @@ sealed interface NavUiState {
 
 @Composable
 fun LaBajadaNavGraph() {
-    val navController = rememberNavController()
     val context = LocalContext.current
+    val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
-    val db = remember { AppDatabase.getDatabase(context) }
-
-    // Repositorios
-    val authRepository: AuthRepository = remember {
-        AuthRepositoryImpl(
-            authDao = db.authDao(),
-            buyerDao = db.buyerDao(),
-            restaurantDao = db.restaurantDao()
-        )
-    }
-    val buyerRepository = remember { BuyerRepositoryImpl(db.buyerDao()) }
-    val restaurantRepository = remember { RestaurantRepositoryImpl(db.restaurantDao()) }
-    val dishRepository = remember { DishRepositoryImpl(db.dishDao()) }
-    val searchRepository = remember { SearchRepositoryImpl(db.searchDao()) }
-    val orderRepository = remember { OrderRepositoryImpl(db.orderDao()) }
-
-    // UseCases auth
-    val sendPasswordResetEmailUseCase = remember { SendPasswordResetEmailUseCase(authRepository) }
-    val loginUseCase = remember { LoginUseCase(authRepository) }
-    val registerBuyerUseCase = remember { RegisterBuyerUseCase(authRepository) }
-    val registerRestaurantUseCase = remember { RegisterRestaurantUseCase(authRepository) }
-    val getActiveBuyerUseCase = remember { GetActiveBuyerUseCase(authRepository, buyerRepository) }
-
-    // UseCases search
-    val saveSearchQueryUseCase = remember { SaveSearchQueryUseCase(searchRepository) }
-    val getRecentSearchHistoryUseCase = remember { GetRecentSearchHistoryUseCase(searchRepository) }
-    val clearSearchHistoryUseCase = remember { ClearSearchHistoryUseCase(searchRepository) }
-    val manageFavoriteRestaurantUseCase = remember { ManageFavoriteRestaurantUseCase(restaurantRepository) }
-    val getAllDishesUseCase = remember { GetAllDishesUseCase(dishRepository) }
-
-    val viewModelFactory = remember {
-        object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return when (modelClass.name) {
-
-                    ForgotPasswordViewModel::class.java.name ->
-                        ForgotPasswordViewModel(sendPasswordResetEmailUseCase) as T
-
-                    LoginViewModel::class.java.name ->
-                        LoginViewModel(loginUseCase) as T
-
-                    BuyerRegisterViewModel::class.java.name ->
-                        BuyerRegisterViewModel(registerBuyerUseCase) as T
-
-                    RestaurantRegisterViewModel::class.java.name ->
-                        RestaurantRegisterViewModel(registerRestaurantUseCase) as T
-
-                    RestaurantDashboardViewModel::class.java.name ->
-                        RestaurantDashboardViewModel(
-                            restaurantRepository = restaurantRepository,
-                            dishRepository = dishRepository,
-                            orderRepository = orderRepository,
-                            authRepository = authRepository
-                        ) as T
-
-                    BuyerSearchViewModel::class.java.name ->
-                        BuyerSearchViewModel(
-                            saveSearchQueryUseCase = saveSearchQueryUseCase,
-                            getRecentSearchHistoryUseCase = getRecentSearchHistoryUseCase,
-                            manageFavoriteRestaurantUseCase = manageFavoriteRestaurantUseCase,
-                            getActiveBuyerUseCase = getActiveBuyerUseCase,
-                            clearSearchHistoryUseCase = clearSearchHistoryUseCase,
-                            getAllDishesUseCase = getAllDishesUseCase,
-                            dishRepository = dishRepository,
-                            restaurantRepository = restaurantRepository,
-                            authRepository = authRepository
-                        ) as T
-
-                    OrderViewModel::class.java.name ->
-                        OrderViewModel(orderRepository = orderRepository) as T
-
-                    else -> throw IllegalArgumentException("ViewModel desconocido: ${modelClass.name}")
-                }
-            }
-        }
-    }
+    val deps = remember { AppDependencies(context) }
+    val factory = remember { AppViewModelFactory(deps) }
 
     var checkSessionTrigger by remember { mutableStateOf(0) }
     var uiState by remember { mutableStateOf<NavUiState>(NavUiState.Loading) }
 
     LaunchedEffect(checkSessionTrigger) {
-        val activeSession = authRepository.getActiveSession()
+        val activeSession = deps.authRepository.getActiveSession()
         uiState = NavUiState.Success(activeSession?.role ?: "")
     }
 
@@ -163,10 +68,10 @@ fun LaBajadaNavGraph() {
 
             NavHost(navController = navController, startDestination = startDestination) {
 
-                composable(route = Screen.Login.route) {
-                    val loginVm: LoginViewModel = viewModel(factory = viewModelFactory)
+                composable(Screen.Login.route) {
+                    val vm: LoginViewModel = viewModel(factory = factory)
                     LoginScreen(
-                        viewModel = loginVm,
+                        viewModel = vm,
                         onLoginSuccess = { rol ->
                             scope.launch {
                                 checkSessionTrigger++
@@ -176,26 +81,30 @@ fun LaBajadaNavGraph() {
                                 }
                             }
                         },
-                        onNavigateToOnboarding = {
-                            navController.navigate(Screen.Onboarding.route)
-                        },
-                        onNavigateToForgotPassword = {
-                            navController.navigate(Screen.ForgotPassword.route)
-                        }
+                        onNavigateToOnboarding = { navController.navigate(Screen.Onboarding.route) },
+                        onNavigateToForgotPassword = { navController.navigate(Screen.ForgotPassword.route) }
                     )
                 }
 
-                composable(route = Screen.Onboarding.route) {
+                composable(Screen.ForgotPassword.route) {
+                    val vm: ForgotPasswordViewModel = viewModel(factory = factory)
+                    ForgotPasswordScreen (
+                        viewModel = vm,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(Screen.Onboarding.route) {
                     OnboardingScreen(
                         onBuyerSelected = { navController.navigate(Screen.RegisterBuyer.route) },
                         onRestaurantSelected = { navController.navigate(Screen.RegisterRestaurant.route) }
                     )
                 }
 
-                composable(route = Screen.RegisterBuyer.route) {
-                    val buyerVm: BuyerRegisterViewModel = viewModel(factory = viewModelFactory)
+                composable(Screen.RegisterBuyer.route) {
+                    val vm: BuyerRegisterViewModel = viewModel(factory = factory)
                     BuyerRegisterScreen(
-                        viewModel = buyerVm,
+                        viewModel = vm,
                         onRegistrationComplete = {
                             scope.launch {
                                 checkSessionTrigger++
@@ -207,23 +116,15 @@ fun LaBajadaNavGraph() {
                     )
                 }
 
-                composable(route = Screen.ForgotPassword.route) {
-                    val forgotPasswordVm: ForgotPasswordViewModel = viewModel(factory = viewModelFactory)
-                    ForgotPasswordScreen (
-                        viewModel = forgotPasswordVm,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(route = Screen.BuyerHome.route) {
-                    val searchVm: BuyerSearchViewModel = viewModel(factory = viewModelFactory)
-                    val orderVm: OrderViewModel = viewModel(factory = viewModelFactory)
+                composable(Screen.BuyerHome.route) {
+                    val searchVm: BuyerSearchViewModel = viewModel(factory = factory)
+                    val orderVm: OrderViewModel = viewModel(factory = factory)
                     BuyerSearchScreen(
                         searchViewModel = searchVm,
                         orderViewModel = orderVm,
                         onLogout = {
                             scope.launch {
-                                authRepository.logout()
+                                deps.authRepository.logout()
                                 checkSessionTrigger++
                                 navController.navigate(Screen.Login.route) {
                                     popUpTo(0) { inclusive = true }
@@ -233,14 +134,14 @@ fun LaBajadaNavGraph() {
                     )
                 }
 
-                composable(route = "buyer_map_buyer") {
+                composable("buyer_map_buyer") {
                     BuyerMapScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
-                composable(route = Screen.RegisterRestaurant.route) {
-                    val restaurantVm: RestaurantRegisterViewModel = viewModel(factory = viewModelFactory)
+                composable(Screen.RegisterRestaurant.route) {
+                    val vm: RestaurantRegisterViewModel = viewModel(factory = factory)
                     RestaurantRegisterScreen(
-                        viewModel = restaurantVm,
+                        viewModel = vm,
                         onRegistrationComplete = {
                             scope.launch {
                                 checkSessionTrigger++
@@ -252,13 +153,13 @@ fun LaBajadaNavGraph() {
                     )
                 }
 
-                composable(route = Screen.RestaurantHome.route) {
-                    val dashboardVm: RestaurantDashboardViewModel = viewModel(factory = viewModelFactory)
+                composable(Screen.RestaurantHome.route) {
+                    val vm: RestaurantDashboardViewModel = viewModel(factory = factory)
                     RestaurantDashboardScreen(
-                        viewModel = dashboardVm,
+                        viewModel = vm,
                         onLogout = {
                             scope.launch {
-                                authRepository.logout()
+                                deps.authRepository.logout()
                                 checkSessionTrigger++
                                 navController.navigate(Screen.Login.route) {
                                     popUpTo(0) { inclusive = true }

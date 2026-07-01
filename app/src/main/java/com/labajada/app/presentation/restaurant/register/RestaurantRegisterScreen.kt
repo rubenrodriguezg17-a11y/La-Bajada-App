@@ -65,15 +65,7 @@ fun RestaurantRegisterScreen(
                 transitionSpec = { fadeIn() togetherWith  fadeOut() }
             ) { step ->
                 when (step) {
-                    1 -> RegisterCredentialsStep(
-                        email = state.email,
-                        password = state.password,
-                        confirmPassword = state.confirmPassword,
-                        onEmailChange = viewModel::onEmailChange,
-                        onPasswordChange = viewModel::onPasswordChange,
-                        onConfirmPasswordChange = viewModel::onConfirmPasswordChange
-                    )
-                    2 -> RegisterBusinessInfoStep(
+                    1 -> RegisterBusinessInfoStep(
                         restaurantName = state.restaurantName,
                         rucNumber = state.rucNumber,
                         phoneNumber = state.phoneNumber,
@@ -85,15 +77,25 @@ fun RestaurantRegisterScreen(
                         onCategorySelected = viewModel::onCategorySelected,
                         onToggleCategoryDropdown = viewModel::toggleCategoryDropdown
                     )
-                    3 -> RegisterLocationStep(
+                    2 -> RegisterLocationStep(
                         addressDetails = state.addressDetails,
                         isLocationSelected = state.isLocationSelected,
                         offersDelivery = state.offersDelivery,
                         maxDeliveryDistanceKm = state.maxDeliveryDistanceKm,
                         imageUrl = state.imageUrl,
+                        businessHours = state.businessHours,
                         onAddressChange = viewModel::onAddressChange,
                         onOpenMapDialog = { viewModel.toggleMapDialog(true) },
-                        onImageSelected = viewModel::onImageSelected
+                        onImageSelected = viewModel::onImageSelected,
+                        onBusinessHoursChange = viewModel::onBusinessHoursChange
+                    )
+                    3 -> RegisterCredentialsStep(
+                        email = state.email,
+                        password = state.password,
+                        confirmPassword = state.confirmPassword,
+                        onEmailChange = viewModel::onEmailChange,
+                        onPasswordChange = viewModel::onPasswordChange,
+                        onConfirmPasswordChange = viewModel::onConfirmPasswordChange
                     )
                 }
             }

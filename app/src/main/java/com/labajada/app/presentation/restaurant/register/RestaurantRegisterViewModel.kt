@@ -23,8 +23,8 @@ class RestaurantRegisterViewModel(
     fun nextStep() {
         val state = _uiState.value
         val canAdvance = when (state.currentStep) {
-            1 -> validateStep1()
-            2 -> validateStep2()
+            1 -> validateBusinessInfo()
+            2 -> validateLocation()
             else -> true
         }
         if (canAdvance) {
@@ -38,29 +38,7 @@ class RestaurantRegisterViewModel(
         }
     }
 
-    private fun validateStep1(): Boolean {
-        val state = _uiState.value
-        if (state.email.isBlank() || state.password.isBlank() || state.confirmPassword.isBlank()) {
-            _uiState.update { it.copy(error = "Completa todos los campos.") }
-            return false
-        }
-        if (!PasswordValidator.isValidEmail(state.email)) {
-            _uiState.update { it.copy(error = "Ingresa un correo electrónico válido.") }
-            return false
-        }
-        val passwordCheck = PasswordValidator.validate(state.password)
-        if (!passwordCheck.isValid) {
-            _uiState.update { it.copy(error = "La contraseña no cumple con los requisitos de seguridad.") }
-            return false
-        }
-        if (state.password != state.confirmPassword) {
-            _uiState.update { it.copy(error = "Las contraseñas no coinciden.") }
-            return false
-        }
-        return true
-    }
-
-    private fun validateStep2(): Boolean {
+    private fun validateBusinessInfo(): Boolean {
         val state = _uiState.value
         if (state.restaurantName.isBlank() || state.rucNumber.isBlank() ||
             state.phoneNumber.isBlank() || state.selectedCategory.isBlank()) {
@@ -73,6 +51,19 @@ class RestaurantRegisterViewModel(
         }
         if (!PeruValidators.isValidPhone(state.phoneNumber)) {
             _uiState.update { it.copy(error = "Ingresa un celular válido (9 dígitos, empieza con 9).") }
+            return false
+        }
+        return true
+    }
+
+    private fun validateLocation(): Boolean {
+        val state = _uiState.value
+        if (state.addressDetails.isBlank()) {
+            _uiState.update { it.copy(error = "Ingresa la dirección de tu local.") }
+            return false
+        }
+        if (!state.isLocationSelected) {
+            _uiState.update { it.copy(error = "Selecciona la ubicación de tu local en el mapa.") }
             return false
         }
         return true
@@ -99,12 +90,26 @@ class RestaurantRegisterViewModel(
     fun onOffersDeliveryChange(value: Boolean) = _uiState.update { it.copy(offersDelivery = value) }
     fun onMaxDeliveryDistanceChange(value: Double) = _uiState.update { it.copy(maxDeliveryDistanceKm = value) }
     fun onImageSelected(url: String?) = _uiState.update { it.copy(imageUrl = url) }
+    fun onBusinessHoursChange(value: String)= _uiState.update{it.copy(businessHours = value)}
 
     fun registerRestaurant(onComplete: () -> Unit) {
         val state = _uiState.value
 
-        if (state.addressDetails.isBlank() || !state.isLocationSelected) {
-            _uiState.update { it.copy(error = "Completa la dirección y selecciona ubicación en el mapa.") }
+        if (state.email.isBlank() || state.password.isBlank() || state.confirmPassword.isBlank()) {
+            _uiState.update { it.copy(error = "Completa todos los campos.") }
+            return
+        }
+        if (!PasswordValidator.isValidEmail(state.email)) {
+            _uiState.update { it.copy(error = "Ingresa un correo electrónico válido.") }
+            return
+        }
+        val passwordCheck = PasswordValidator.validate(state.password)
+        if (!passwordCheck.isValid) {
+            _uiState.update { it.copy(error = "La contraseña no cumple con los requisitos de seguridad.") }
+            return
+        }
+        if (state.password != state.confirmPassword) {
+            _uiState.update { it.copy(error = "Las contraseñas no coinciden.") }
             return
         }
 
@@ -124,7 +129,8 @@ class RestaurantRegisterViewModel(
                     longitude = state.longitude,
                     offersDelivery = state.offersDelivery,
                     maxDeliveryDistanceKm = if (state.offersDelivery) state.maxDeliveryDistanceKm else 0.0,
-                    imageUrl = state.imageUrl
+                    imageUrl = state.imageUrl,
+                    businessHours = state.businessHours?.trim()?.ifBlank { null }
                 )
 
                 val result = registerRestaurantUseCase.execute(newRestaurant)

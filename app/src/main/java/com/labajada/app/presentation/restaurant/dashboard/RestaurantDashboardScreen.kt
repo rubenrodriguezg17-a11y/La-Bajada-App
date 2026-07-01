@@ -4,15 +4,28 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.labajada.app.presentation.restaurant.dashboard.components.*
+import com.labajada.app.presentation.restaurant.dashboard.components.DashboardHeader
+import com.labajada.app.presentation.restaurant.dashboard.components.DashboardModals
+import com.labajada.app.presentation.restaurant.dashboard.components.menu.MenuScreen
+import com.labajada.app.presentation.restaurant.dashboard.components.pedidos.PedidosScreen
+import com.labajada.app.presentation.restaurant.dashboard.components.perfil.PerfilScreen
+
+data class BottomNavItem(
+    val label: String,
+    val icon: ImageVector,
+    val index: Int
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,20 +34,57 @@ fun RestaurantDashboardScreen(
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-
     val uiState by viewModel.uiState.collectAsState()
     val platillosDelDia by viewModel.platillosDelDia.collectAsState()
     val pedidosActivosList by viewModel.pedidosActivos.collectAsState()
     val gananciasHoyCalculadas by viewModel.gananciasHoy.collectAsState()
     val session by viewModel.activeSession.collectAsState()
-    val sheetState = rememberModalBottomSheetState()
     val backupName by viewModel.fallbackRestaurantName.collectAsState()
-    val nameRestaurant = session?.restaurantName ?: uiState.resNameByOwner ?: backupName
+    val nameRestaurant = session?.restaurantName ?: uiState.resNameByOwner.ifBlank { backupName }
+
+    val bottomNavItems = listOf(
+        BottomNavItem("Pedidos", Icons.Default.ShoppingCart, 0),
+        BottomNavItem("Mi Menú", Icons.Default.Menu, 1),
+        BottomNavItem("Perfil", Icons.Default.Person, 2)
+    )
 
     Scaffold(
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color.White,
+                tonalElevation = 8.dp
+            ) {
+                bottomNavItems.forEach { item ->
+                    NavigationBarItem(
+                        selected = uiState.selectedTab == item.index,
+                        onClick = { viewModel.onTabSelected(item.index) },
+                        icon = {
+                            BadgedBox(
+                                badge = {
+                                    if (item.index == 0 && pedidosActivosList.isNotEmpty()) {
+                                        Badge { Text("${pedidosActivosList.size}") }
+                                    }
+                                }
+                            ) {
+                                Icon(item.icon, contentDescription = item.label)
+                            }
+                        },
+                        label = {
+                            Text(item.label, fontWeight = FontWeight.Bold)
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color(0xFF263238),
+                            selectedTextColor = Color(0xFF263238),
+                            indicatorColor = Color(0xFFECEFF1),
+                            unselectedIconColor = Color(0xFF9E9E9E),
+                            unselectedTextColor = Color(0xFF9E9E9E)
+                        )
+                    )
+                }
+            }
+        },
         floatingActionButton = {
-            if (uiState.selectedTab == 0) {
+            if (uiState.selectedTab == 1) {
                 ExtendedFloatingActionButton(
                     onClick = {
                         viewModel.prepararNuevoPlatillo()
@@ -58,78 +108,33 @@ fun RestaurantDashboardScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            Text(
-                text = "$nameRestaurant!",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF263238),
-                modifier = Modifier.padding(top = 24.dp)
-            )
-
-            Text(
-                text = "¿Que haremos hoy?",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF757575),
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Bloque de Métricas (Mantiene tu lógica)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MetricCard(
-                    title = "Pedidos en Cola",
-                    value = "${pedidosActivosList.size}",
-                    modifier = Modifier.weight(1f)
-                )
-                MetricCard(
-                    title = "Ganancias de Hoy",
-                    value = "S/. ${String.format("%.2f", gananciasHoyCalculadas)}",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // El resto de tus Tabs y Contenidos se mantienen exactamente igual...
-            TabRow(
-                selectedTabIndex = uiState.selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = Color(0xFF263238)
-            ) {
-                Tab(
-                    selected = uiState.selectedTab == 0,
-                    onClick = {
-                        viewModel.onTabSelected(0)
-                        if (uiState.isEditingProfile) viewModel.toggleProfileEdit()
-                    },
-                    text = { Text("Menú del Día", fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 1,
-                    onClick = {
-                        viewModel.onTabSelected(1)
-                        if (uiState.isEditingProfile) viewModel.toggleProfileEdit()
-                    },
-                    text = { Text("Pedidos (${pedidosActivosList.size})", fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 2,
-                    onClick = { viewModel.onTabSelected(2) },
-                    text = { Text("Mi Local", fontWeight = FontWeight.Bold) }
-                )
-            }
+            DashboardHeader(
+                restaurantName = nameRestaurant,
+                pedidosEnCola = pedidosActivosList.size,
+                gananciasHoy = gananciasHoyCalculadas,
+                isGananciasVisible = uiState.isGananciasVisible,
+                isOpen = uiState.resIsOpen,
+                onToggleGanancias = { viewModel.toggleGananciasVisibility() },
+                onToggleIsOpen = { viewModel.toggleIsOpen() }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             when (uiState.selectedTab) {
-                0 -> MenuTabContent(viewModel = viewModel, platillosDelDia = platillosDelDia)
-                1 -> OrdersTabContent(viewModel = viewModel, pedidosActivosList = pedidosActivosList)
-                2 -> ProfileTabContent(viewModel = viewModel, onLogout = onLogout)
+                0 -> PedidosScreen(
+                    viewModel = viewModel,
+                    pedidosActivosList = pedidosActivosList
+                )
+                1 -> MenuScreen(
+                    viewModel = viewModel,
+                    platillosDelDia = platillosDelDia
+                )
+                2 -> PerfilScreen(
+                    viewModel = viewModel,
+                    onLogout = onLogout
+                )
             }
         }
     }

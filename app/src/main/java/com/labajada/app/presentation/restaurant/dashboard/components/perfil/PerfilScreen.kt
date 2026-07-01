@@ -1,4 +1,4 @@
-package com.labajada.app.presentation.restaurant.dashboard.components
+package com.labajada.app.presentation.restaurant.dashboard.components.perfil
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,21 +23,21 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileTabContent(
+fun PerfilScreen(
     viewModel: RestaurantDashboardViewModel,
     onLogout: () -> Unit
 ) {
-    val scrollProfileState = rememberScrollState()
+    val scrollState = rememberScrollState()
     val state by viewModel.uiState.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(scrollProfileState),
+            .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // --- MODO LECTURA ---
         if (!state.isEditingProfile) {
+            // --- MODO LECTURA ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -55,16 +55,17 @@ fun ProfileTabContent(
                         fontWeight = FontWeight.Bold
                     )
                     HorizontalDivider(color = Color(0xFFEEEEEE))
-
-                    Text("Huarique: ${state.resNameByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("RUC: ${state.resRucByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
-                    Text("Contacto: ${state.resPhoneByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
-                    Text("Rubro: ${state.resCategoryByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
-                    Text("Dirección: ${state.resAddressByOwner.ifBlank { "No registrado" }}", fontSize = 14.sp, color = Color.Gray)
-
+                    InfoRow("Huarique", state.resNameByOwner)
+                    InfoRow("RUC / DNI", state.resRucByOwner)
+                    InfoRow("Contacto", state.resPhoneByOwner)
+                    InfoRow("Rubro", state.resCategoryByOwner)
+                    InfoRow("Dirección", state.resAddressByOwner)
+                    if (state.resBusinessHours.isNotBlank()) {
+                        InfoRow("Horario habitual", state.resBusinessHours)
+                    }
                     Text(
-                        text = "Satélite: Lat: ${String.format(Locale.US, "%.4f", state.resLatitude)} | Lon: ${String.format(Locale.US, "%.4f", state.resLongitude)}",
-                        fontSize = 13.sp,
+                        text = "Lat: ${String.format(Locale.US, "%.4f", state.resLatitude)} | Lon: ${String.format(Locale.US, "%.4f", state.resLongitude)}",
+                        fontSize = 12.sp,
                         color = Color(0xFF1976D2)
                     )
                 }
@@ -80,9 +81,9 @@ fun ProfileTabContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Editar Datos del Local", fontWeight = FontWeight.Bold)
             }
-        }
-        // --- MODO EDICIÓN ---
-        else {
+
+        } else {
+            // --- MODO EDICIÓN ---
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -129,7 +130,10 @@ fun ProfileTabContent(
                     readOnly = true,
                     label = { Text("Rubro") },
                     trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    modifier = Modifier.fillMaxWidth().menuAnchor(
+                        type = MenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 )
                 ExposedDropdownMenu(
@@ -139,9 +143,7 @@ fun ProfileTabContent(
                     viewModel.categoriesDisponibles.forEach { item ->
                         DropdownMenuItem(
                             text = { Text(item) },
-                            onClick = {
-                                viewModel.onProfileCategorySelected(item)
-                            }
+                            onClick = { viewModel.onProfileCategorySelected(item) }
                         )
                     }
                 }
@@ -153,12 +155,14 @@ fun ProfileTabContent(
                     .clickable { viewModel.toggleProfileMap(true) }
             ) {
                 OutlinedTextField(
-                    value = "Ubicación Georreferenciada",
+                    value = "Toca para actualizar en el mapa",
                     onValueChange = {},
                     readOnly = true,
                     enabled = false,
                     label = { Text("Ubicación Satelital") },
-                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFD32F2F)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFD32F2F))
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -178,28 +182,62 @@ fun ProfileTabContent(
                 singleLine = true
             )
 
+            OutlinedTextField(
+                value = state.resBusinessHours,
+                onValueChange = { viewModel.onProfileBusinessHoursChange(it) },
+                label = { Text("Horario habitual (opcional)") },
+                placeholder = { Text("Ej: Lun-Sáb 6pm a 11pm") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
             Button(
                 onClick = { viewModel.guardarDatosDelLocal() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF000000)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263238)),
                 shape = RoundedCornerShape(12.dp),
                 enabled = state.resNameByOwner.isNotBlank() && state.resRucByOwner.isNotBlank()
                         && state.resPhoneByOwner.isNotBlank() && state.resAddressByOwner.isNotBlank()
             ) {
-                Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                Text("Guardar Cambios", fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider(color = Color(0xFFEEEEEE))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = onLogout,
-            modifier = Modifier.fillMaxWidth().height(52.dp).padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("Cerrar Sesión del Local", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
         }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "$label:",
+            fontSize = 13.sp,
+            color = Color(0xFF757575),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(0.4f)
+        )
+        Text(
+            text = value.ifBlank { "No registrado" },
+            fontSize = 13.sp,
+            color = Color(0xFF212121),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(0.6f)
+        )
     }
 }

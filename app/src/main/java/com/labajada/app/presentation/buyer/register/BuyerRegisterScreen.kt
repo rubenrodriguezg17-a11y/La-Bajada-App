@@ -6,6 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.labajada.app.core.validation.PasswordValidator
@@ -26,6 +30,7 @@ fun BuyerRegisterScreen(
     viewModel: BuyerRegisterViewModel,
     onRegistrationComplete: () -> Unit
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
@@ -132,11 +137,21 @@ fun BuyerRegisterScreen(
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 isError = showPasswordChecklist && !passwordCheck.isValid,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFD32F2F), focusedLabelColor = Color(0xFFD32F2F))
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                        )
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFD32F2F),
+                    focusedLabelColor = Color(0xFFD32F2F)
+                )
             )
-
             if (showPasswordChecklist) {
                 Column(
                     modifier = Modifier
@@ -148,7 +163,6 @@ fun BuyerRegisterScreen(
                     PasswordRuleRow("Una letra mayúscula", passwordCheck.hasUppercase)
                 }
             }
-
             if (uiState.error != null) {
                 Text(
                     text = uiState.error!!,
